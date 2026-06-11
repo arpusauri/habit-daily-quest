@@ -76,62 +76,83 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// 2. Complete a habit and earn gems
-app.post("/api/habits/:id/complete", (req, res) => {
-  const habitId = parseInt(req.params.id);
-  const habit = habits.find((h) => h.id === habitId);
+// 2. Complete a habit and earn gems (Database Version)
+app.post('/api/habits/:id/complete', async (req, res) => {
+  try {
+    const habitId = parseInt(req.params.id);
+    const userId = 1; // Hardcoding user 1 for now
 
-  if (!habit) return res.status(404).json({ error: "Habit not found" });
+    // Check if habit is already completed
+    const habitCheck = await pool.query('SELECT * FROM habits WHERE id = $1', [habitId]);
+    if (habitCheck.rows.length === 0) return res.status(404).json({ error: "Habit not found" });
+    if (habitCheck.rows[0].is_completed) return res.status(400).json({ error: "Habit already completed today!" });
 
-  if (!habit.isCompleted) {
-    habit.isCompleted = true;
-    habit.streak += 1;
-    userProfile.gems += 30;
-    res.json({ user: userProfile, habits: habits });
-  } else {
-    res.status(400).json({ error: "Habit already completed today!" });
+    // Mark habit complete and increase streak
+    await pool.query('UPDATE habits SET is_completed = true, streak = streak + 1 WHERE id = $1', [habitId]);
+    
+    // Add 30 gems to user
+    await pool.query('UPDATE users SET gems = gems + 30 WHERE id = $1', [userId]);
+
+    // Fetch the updated data to send back to React
+    const updatedUser = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const updatedHabits = await pool.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC', [userId]);
+    const inventoryResult = await pool.query('SELECT item_id FROM inventory WHERE user_id = $1', [userId]);
+
+    const formattedUser = {
+      ...updatedUser.rows[0],
+      inventory: inventoryResult.rows.map(row => row.item_id)
+    };
+
+    res.json({ user: formattedUser, habits: updatedHabits.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// 3. THE GACHA PULL ROUTE (Costs 50 Gems)
-app.post("/api/gacha/pull", (req, res) => {
-  if (userProfile.gems < 50) {
-    return res
-      .status(400)
-      .json({ error: "Not enough gems! Go do your habits! 😤" });
+// 3. THE GACHA PULL ROUTE (Database Version)
+app.post('/api/gacha/pull', async (req, res) => {
+  try {
+    const userId = 1;
+
+    // Check if user has enough gems
+    const userCheck = await pool.query('SELECT gems FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows[0].gems < 50) {
+      return res.status(400).json({ error: "Not enough gems! Go do your habits! 😤" });
+    }
+
+    // Deduct 50 gems
+    await pool.query('UPDATE users SET gems = gems - 50 WHERE id = $1', [userId]);
+
+    // RNG Math Logic
+    const roll = Math.random();
+    let selectedRarity = 'R';
+    if (roll < 0.05) selectedRarity = 'SSR';
+    else if (roll < 0.30) selectedRarity = 'SR';
+
+    const availableItems = COSMETIC_POOL.filter(item => item.rarity === selectedRarity);
+    const pulledItem = availableItems[Math.floor(Math.random() * availableItems.length)];
+
+    // Check if they already own it; if not, add to inventory table
+    const invCheck = await pool.query('SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2', [userId, pulledItem.id]);
+    if (invCheck.rows.length === 0) {
+      await pool.query('INSERT INTO inventory (user_id, item_id) VALUES ($1, $2)', [userId, pulledItem.id]);
+    }
+
+    // Fetch updated user data to send back
+    const updatedUser = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const inventoryResult = await pool.query('SELECT item_id FROM inventory WHERE user_id = $1', [userId]);
+
+    const formattedUser = {
+      ...updatedUser.rows[0],
+      inventory: inventoryResult.rows.map(row => row.item_id)
+    };
+
+    res.json({ user: formattedUser, pulledItem: pulledItem });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
   }
-
-  // Deduct Currency
-  userProfile.gems -= 50;
-
-  // RNG Math Logic
-  const roll = Math.random(); // Generates a number between 0.0 and 1.0
-  let selectedRarity = "R";
-
-  if (roll < 0.05) {
-    selectedRarity = "SSR"; // 5% chance
-  } else if (roll < 0.3) {
-    selectedRarity = "SR"; // 25% chance (0.05 + 0.25)
-  } else {
-    selectedRarity = "R"; // 70% chance
-  }
-
-  // Filter pool to items matching the rolled rarity, then pick a random one
-  const availableItems = COSMETIC_POOL.filter(
-    (item) => item.rarity === selectedRarity,
-  );
-  const pulledItem =
-    availableItems[Math.floor(Math.random() * availableItems.length)];
-
-  // Add to inventory if they don't already have it
-  if (!userProfile.inventory.includes(pulledItem.id)) {
-    userProfile.inventory.push(pulledItem.id);
-  }
-
-  res.json({
-    user: userProfile,
-    pulledItem: pulledItem,
-  });
 });
 
 app.listen(PORT, () => {
