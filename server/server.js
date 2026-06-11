@@ -1,22 +1,30 @@
+require("dotenv").config(); // This loads your .env file
 const express = require("express");
 const cors = require("cors");
+const { Pool } = require("pg"); // The Postgres connection tool
+
 const app = express();
 const PORT = 5000;
 
 app.use(cors());
 app.use(express.json());
 
-// Mock Database
-let userProfile = {
-  username: "GachaMaster",
-  gems: 0,
-  inventory: [], // Track unlocked item IDs here
-};
+// --- DATABASE CONNECTION ---
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, // Required for most cloud databases
+  },
+});
 
-let habits = [
-  { id: 1, name: "Write 50 words in Diary", isCompleted: false, streak: 0 },
-  { id: 2, name: "Read for 15 minutes", isCompleted: false, streak: 0 },
-];
+// Test the connection when the server starts
+pool.connect((err, client, release) => {
+  if (err) {
+    return console.error("Error acquiring client", err.stack);
+  }
+  console.log("✅ Connected to PostgreSQL database successfully!");
+  release();
+});
 
 // The Gacha Pool (Cosmetics)
 const COSMETIC_POOL = [
@@ -38,8 +46,34 @@ const COSMETIC_POOL = [
 ];
 
 // 1. Get current data (Updated to include inventory)
-app.get("/api/dashboard", (req, res) => {
-  res.json({ user: userProfile, habits: habits, cosmetics: COSMETIC_POOL });
+// 1. Get current data from PostgreSQL
+app.get('/api/dashboard', async (req, res) => {
+  try {
+    // Fetch the first user (id = 1)
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [1]);
+    const user = userResult.rows[0];
+
+    // Fetch their habits
+    const habitsResult = await pool.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC', [1]);
+    const habits = habitsResult.rows;
+
+    // Fetch their inventory and map it into a simple array of item_ids
+    const inventoryResult = await pool.query('SELECT item_id FROM inventory WHERE user_id = $1', [1]);
+    const inventory = inventoryResult.rows.map(row => row.item_id);
+
+    // Format the data to look exactly how our React frontend expects it
+    const formattedUser = {
+      id: user.id,
+      username: user.username,
+      gems: user.gems,
+      inventory: inventory
+    };
+
+    res.json({ user: formattedUser, habits: habits, cosmetics: COSMETIC_POOL });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error fetching dashboard" });
+  }
 });
 
 // 2. Complete a habit and earn gems
