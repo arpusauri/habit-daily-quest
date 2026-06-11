@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 
+// 1. ADD YOUR LIVE URL HERE (No slash at the end)
+const API_URL = "https://habitapi-q82gplsb.b4a.run";
+
 function App() {
   const [userData, setUserData] = useState({
     username: "",
@@ -10,7 +13,8 @@ function App() {
   const [pulledResult, setPulledResult] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/dashboard")
+    // 2. UPDATED FETCH
+    fetch(`${API_URL}/api/dashboard`)
       .then((res) => res.json())
       .then((data) => {
         setUserData(data.user);
@@ -20,7 +24,8 @@ function App() {
   }, []);
 
   const completeHabit = (id) => {
-    fetch(`http://localhost:5000/api/habits/${id}/complete`, { method: "POST" })
+    // 3. UPDATED FETCH
+    fetch(`${API_URL}/api/habits/${id}/complete`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) alert(data.error);
@@ -32,7 +37,8 @@ function App() {
   };
 
   const pullGacha = () => {
-    fetch("http://localhost:5000/api/gacha/pull", { method: "POST" })
+    // 4. UPDATED FETCH
+    fetch(`${API_URL}/api/gacha/pull`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
