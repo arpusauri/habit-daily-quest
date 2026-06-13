@@ -9,17 +9,34 @@ const PORT = process.env.PORT || 5000;
 // ==========================================
 // 1. MIDDLEWARE CONFIGURATION
 // ==========================================
+
+// Trust the Back4App reverse proxy (crucial for secure cookies and headers)
+app.set("trust proxy", 1); 
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://habit-daily-quest.vercel.app",
+  "https://habit-daily-quest.vercel.app/" // Added trailing slash just in case
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "https://habit-daily-quest.vercel.app",
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman/cURL) or if it matches our list
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-  }),
+  })
 );
+
+// Explicitly handle pre-flight requests for all routes
+app.options('*', cors()); 
 app.use(express.json());
 
 // ==========================================
