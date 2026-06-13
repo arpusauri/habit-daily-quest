@@ -6,29 +6,42 @@ const { Pool } = require("pg");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 1. MIDDLEWARE (CORS harus paling atas setelah express diinisialisasi)
+// ==========================================
+// 1. MIDDLEWARE CONFIGURATION
+// ==========================================
 app.use(
   cors({
     origin: [
-      "http://localhost:5173", 
-      "http://localhost:3000", 
-      "https://habit-daily-quest.vercel.app", 
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://habit-daily-quest.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 
-// 2. DATABASE CONFIGURATION (Definisikan pool DULU sebelum dipakai)
+// ==========================================
+// 2. DATABASE CONFIGURATION & CONNECTION
+// ==========================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, 
+    rejectUnauthorized: false,
   },
 });
 
-// The Gacha Pool (Cosmetics)
+// Test koneksi database saat server pertama kali menyala
+pool.connect((err, client, release) => {
+  if (err) {
+    return console.error("❌ Error acquiring client", err.stack);
+  }
+  console.log("✅ Connected to PostgreSQL database successfully!");
+  release();
+});
+
+// Gacha Pool Data (Cosmetics)
 const COSMETIC_POOL = [
   { id: "r_blue", name: "🔵 Cyan Border", rarity: "R", chance: 0.7 },
   { id: "r_pink", name: "🌸 Pink Text Font", rarity: "R", chance: 0.7 },
@@ -47,13 +60,15 @@ const COSMETIC_POOL = [
   },
 ];
 
-// 1. Get current data from PostgreSQL with Auto-Daily-Reset
-// 1. GET DASHBOARD DATA (With Bulletproof Sleep-Proof Daily Reset)
+// ==========================================
+// 3. API ROUTES
+// ==========================================
+
+// [GET] Dashboard Data (With Daily Reset)
 app.get("/api/dashboard", async (req, res) => {
   try {
-    const userId = 1; // Hardcoded user for now
+    const userId = 1;
 
-    // 1. Fetch user data from Neon
     const userResult = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
     ]);
@@ -61,33 +76,23 @@ app.get("/api/dashboard", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
     const user = userResult.rows[0];
-
-    // 2. Get today's date string (YYYY-MM-DD) based on server time
     const todayStr = new Date().toISOString().split("T")[0];
 
-    // 3. CHECK IF WE NEED TO RESET: Has the date changed since the last reset?
     if (user.last_reset !== todayStr) {
       console.log(
         `[RESET] New day detected! Resetting quests for user ${userId}.`,
       );
-
-      // A. Set all habits back to uncompleted for this user
       await pool.query(
         "UPDATE habits SET is_completed = false WHERE user_id = $1",
         [userId],
       );
-
-      // B. CRITICAL STEP: Update the user's last_reset date to TODAY so this doesn't run again on refresh!
       await pool.query("UPDATE users SET last_reset = $1 WHERE id = $2", [
         todayStr,
         userId,
       ]);
-
-      // C. Update our local variable so the response has the correct date
       user.last_reset = todayStr;
     }
 
-    // 4. Fetch the habits and inventory
     const habitsResult = await pool.query(
       "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
       [userId],
@@ -98,7 +103,6 @@ app.get("/api/dashboard", async (req, res) => {
     );
     const inventory = inventoryResult.rows.map((row) => row.item_id);
 
-    // 5. Send everything back to React
     res.json({
       user: {
         id: user.id,
@@ -119,14 +123,12 @@ app.get("/api/dashboard", async (req, res) => {
   }
 });
 
-// 2. Complete a habit and earn gems (Database Version)
-// 2. Complete a habit and earn gems + EXP (Database Version)
+// [POST] Complete a habit (Earn gems + EXP & Level Up)
 app.post("/api/habits/:id/complete", async (req, res) => {
   try {
     const habitId = parseInt(req.params.id);
-    const userId = 1; // Hardcoding user 1 for now
+    const userId = 1;
 
-    // Check if habit is already completed
     const habitCheck = await pool.query("SELECT * FROM habits WHERE id = $1", [
       habitId,
     ]);
@@ -135,39 +137,31 @@ app.post("/api/habits/:id/complete", async (req, res) => {
     if (habitCheck.rows[0].is_completed)
       return res.status(400).json({ error: "Habit already completed today!" });
 
-    // Mark habit complete and increase streak
     await pool.query(
       "UPDATE habits SET is_completed = true, streak = streak + 1 WHERE id = $1",
       [habitId],
     );
 
-    // --- LEVEL UP LOGIC ---
-    // 1. Get current user stats
     const userCheck = await pool.query(
       "SELECT gems, level, exp FROM users WHERE id = $1",
       [userId],
     );
     let { gems, level, exp } = userCheck.rows[0];
 
-    // 2. Add rewards
     gems += 30;
     exp += 50;
 
-    // 3. Check for Level Up! (Let's say it takes 100 EXP to level up)
     const EXP_NEEDED = 100;
     while (exp >= EXP_NEEDED) {
       level += 1;
-      exp -= EXP_NEEDED; // Carry over leftover EXP
+      exp -= EXP_NEEDED;
     }
 
-    // 4. Save new stats to the database
     await pool.query(
       "UPDATE users SET gems = $1, level = $2, exp = $3 WHERE id = $4",
       [gems, level, exp, userId],
     );
-    // ----------------------
 
-    // Fetch the updated data to send back to React
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
     ]);
@@ -192,24 +186,20 @@ app.post("/api/habits/:id/complete", async (req, res) => {
   }
 });
 
-// 4. CREATE A NEW HABIT (Database Version)
+// [POST] Create a new habit
 app.post("/api/habits", async (req, res) => {
   try {
     const { name } = req.body;
-    const userId = 1; // Hardcoding user 1 for now
+    const userId = 1;
 
     if (!name || name.trim() === "") {
       return res.status(400).json({ error: "Habit name cannot be empty!" });
     }
 
-    // Insert the new habit into the database
-    // Defaulting is_completed to false and streak to 0
     await pool.query(
       "INSERT INTO habits (user_id, name, is_completed, streak) VALUES ($1, $2, false, 0)",
       [userId, name.trim()],
     );
-
-    // Fetch the updated habits list to send back to React so it refreshes instantly
     const updatedHabits = await pool.query(
       "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
       [userId],
@@ -222,13 +212,12 @@ app.post("/api/habits", async (req, res) => {
   }
 });
 
-// 5. EQUIP A COSMETIC ITEM
+// [POST] Equip a cosmetic item
 app.post("/api/gacha/equip", async (req, res) => {
   try {
     const { itemId } = req.body;
     const userId = 1;
 
-    // 1. Double check they actually own this item
     const checkOwn = await pool.query(
       "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
       [userId, itemId],
@@ -237,16 +226,13 @@ app.post("/api/gacha/equip", async (req, res) => {
       return res.status(400).json({ error: "You don't own this item yet!" });
     }
 
-    // 2. Determine which slot it goes into based on its ID prefix
     let columnToUpdate = "";
     if (itemId.startsWith("r_blue")) columnToUpdate = "equipped_border";
     else if (itemId.startsWith("r_pink")) columnToUpdate = "equipped_font";
     else if (itemId.startsWith("sr_dark")) columnToUpdate = "equipped_theme";
-    else if (itemId.startsWith("sr_gold"))
-      columnToUpdate = "equipped_font"; // Username tags fall under font styling
+    else if (itemId.startsWith("sr_gold")) columnToUpdate = "equipped_font";
     else if (itemId.startsWith("ssr_matrix")) columnToUpdate = "equipped_theme";
 
-    // 3. Update that specific slot in the database
     if (columnToUpdate) {
       await pool.query(
         `UPDATE users SET ${columnToUpdate} = $1 WHERE id = $2`,
@@ -254,7 +240,6 @@ app.post("/api/gacha/equip", async (req, res) => {
       );
     }
 
-    // 4. Fetch updated user state to send back to React
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
     ]);
@@ -263,7 +248,6 @@ app.post("/api/gacha/equip", async (req, res) => {
       [userId],
     );
 
-    // Format including the new equipped slots
     const formattedUser = {
       id: updatedUser.rows[0].id,
       username: updatedUser.rows[0].username,
@@ -281,19 +265,16 @@ app.post("/api/gacha/equip", async (req, res) => {
   }
 });
 
-// 6. DELETE A HABIT
+// [DELETE] Delete a habit
 app.delete("/api/habits/:id", async (req, res) => {
   try {
     const habitId = parseInt(req.params.id);
-    const userId = 1; // Hardcoded for now
+    const userId = 1;
 
-    // Delete the habit from the database
     await pool.query("DELETE FROM habits WHERE id = $1 AND user_id = $2", [
       habitId,
       userId,
     ]);
-
-    // Fetch the updated habits list to send back to React
     const updatedHabits = await pool.query(
       "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
       [userId],
@@ -306,12 +287,11 @@ app.delete("/api/habits/:id", async (req, res) => {
   }
 });
 
-// 3. THE GACHA PULL ROUTE (Database Version)
+// [POST] Gacha Pull Route
 app.post("/api/gacha/pull", async (req, res) => {
   try {
     const userId = 1;
 
-    // Check if user has enough gems
     const userCheck = await pool.query("SELECT gems FROM users WHERE id = $1", [
       userId,
     ]);
@@ -321,12 +301,10 @@ app.post("/api/gacha/pull", async (req, res) => {
         .json({ error: "Not enough gems! Go do your habits! 😤" });
     }
 
-    // Deduct 50 gems
     await pool.query("UPDATE users SET gems = gems - 50 WHERE id = $1", [
       userId,
     ]);
 
-    // RNG Math Logic
     const roll = Math.random();
     let selectedRarity = "R";
     if (roll < 0.05) selectedRarity = "SSR";
@@ -338,7 +316,6 @@ app.post("/api/gacha/pull", async (req, res) => {
     const pulledItem =
       availableItems[Math.floor(Math.random() * availableItems.length)];
 
-    // Check if they already own it; if not, add to inventory table
     const invCheck = await pool.query(
       "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
       [userId, pulledItem.id],
@@ -350,7 +327,6 @@ app.post("/api/gacha/pull", async (req, res) => {
       );
     }
 
-    // Fetch updated user data to send back
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
     ]);
@@ -371,6 +347,9 @@ app.post("/api/gacha/pull", async (req, res) => {
   }
 });
 
+// ==========================================
+// 4. SERVER INITIALIZATION (Hanya ada SATU di paling bawah)
+// ==========================================
 app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+  console.log(`🚀 Backend server running on port ${PORT}`);
 });
