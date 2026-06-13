@@ -365,8 +365,8 @@ app.post("/api/gacha/pull", async (req, res) => {
 });
 
 // ==========================================
-// 4. SERVER INITIALIZATION (Hanya ada SATU di paling bawah)
+// 4. SERVER INITIALIZATION 
 // ==========================================
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Backend server running on port ${PORT}`);
 });
