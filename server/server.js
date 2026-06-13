@@ -47,18 +47,47 @@ const COSMETIC_POOL = [
 
 // 1. Get current data (Updated to include inventory)
 // 1. Get current data from PostgreSQL
+// 1. Get current data from PostgreSQL with Auto-Daily-Reset
 app.get('/api/dashboard', async (req, res) => {
   try {
-    // Fetch the first user (id = 1)
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [1]);
+    const userId = 1; // Hardcoding user 1 for now
+
+    // Fetch the user data
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     const user = userResult.rows[0];
 
-    // Fetch their habits
-    const habitsResult = await pool.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC', [1]);
+    // --- SLEEP-PROOF DAILY RESET LOGIC ---
+    // Get today's date in local server format (YYYY-MM-DD)
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Format the database date into the same clean string format
+    const lastLoginStr = user.last_login ? new Date(user.last_login).toISOString().split('T')[0] : null;
+
+    if (todayStr !== lastLoginStr) {
+      console.log("☀️ It's a new day! Resetting quests and updating streak tracking...");
+
+      // 1. If user completely missed yesterday, break their habit streaks!
+      // (Optional rule: If difference is more than 1 day, set streak back to 0)
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+      if (user.last_login && (new Date(todayStr) - new Date(lastLoginStr) > oneDayInMs)) {
+         // Reset streaks for habits that were left incomplete yesterday
+         await pool.query('UPDATE habits SET streak = 0 WHERE user_id = $1 AND is_completed = false', [userId]);
+      }
+
+      // 2. Uncheck all daily quests for the new day
+      await pool.query('UPDATE habits SET is_completed = false WHERE user_id = $1', [userId]);
+
+      // 3. Update the user's last_login column to today so this doesn't run again until tomorrow
+      await pool.query('UPDATE users SET last_login = $1 WHERE id = $2', [todayStr, userId]);
+    }
+    // ------------------------------------
+
+    // Fetch their updated habits
+    const habitsResult = await pool.query('SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC', [userId]);
     const habits = habitsResult.rows;
 
     // Fetch their inventory and map it into a simple array of item_ids
-    const inventoryResult = await pool.query('SELECT item_id FROM inventory WHERE user_id = $1', [1]);
+    const inventoryResult = await pool.query('SELECT item_id FROM inventory WHERE user_id = $1', [userId]);
     const inventory = inventoryResult.rows.map(row => row.item_id);
 
     // Format the data to look exactly how our React frontend expects it
@@ -66,7 +95,10 @@ app.get('/api/dashboard', async (req, res) => {
       id: user.id,
       username: user.username,
       gems: user.gems,
-      inventory: inventory
+      equipped_border: user.equipped_border,
+      equipped_font: user.equipped_font,
+      equipped_theme: user.equipped_theme,
+      inventory: inventory,
     };
 
     res.json({ user: formattedUser, habits: habits, cosmetics: COSMETIC_POOL });
@@ -107,6 +139,83 @@ app.post('/api/habits/:id/complete', async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// 4. CREATE A NEW HABIT (Database Version)
+app.post('/api/habits', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const userId = 1; // Hardcoding user 1 for now
+
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Habit name cannot be empty!" });
+    }
+
+    // Insert the new habit into the database
+    // Defaulting is_completed to false and streak to 0
+    await pool.query(
+      'INSERT INTO habits (user_id, name, is_completed, streak) VALUES ($1, $2, false, 0)',
+      [userId, name.trim()]
+    );
+
+    // Fetch the updated habits list to send back to React so it refreshes instantly
+    const updatedHabits = await pool.query(
+      'SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC', 
+      [userId]
+    );
+
+    res.json({ habits: updatedHabits.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error creating habit" });
+  }
+});
+
+// 5. EQUIP A COSMETIC ITEM
+app.post('/api/gacha/equip', async (req, res) => {
+  try {
+    const { itemId } = req.body;
+    const userId = 1;
+
+    // 1. Double check they actually own this item
+    const checkOwn = await pool.query('SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2', [userId, itemId]);
+    if (checkOwn.rows.length === 0) {
+      return res.status(400).json({ error: "You don't own this item yet!" });
+    }
+
+    // 2. Determine which slot it goes into based on its ID prefix
+    let columnToUpdate = '';
+    if (itemId.startsWith('r_blue')) columnToUpdate = 'equipped_border';
+    else if (itemId.startsWith('r_pink')) columnToUpdate = 'equipped_font';
+    else if (itemId.startsWith('sr_dark')) columnToUpdate = 'equipped_theme';
+    else if (itemId.startsWith('sr_gold')) columnToUpdate = 'equipped_font'; // Username tags fall under font styling
+    else if (itemId.startsWith('ssr_matrix')) columnToUpdate = 'equipped_theme';
+
+    // 3. Update that specific slot in the database
+    if (columnToUpdate) {
+      await pool.query(`UPDATE users SET ${columnToUpdate} = $1 WHERE id = $2`, [itemId, userId]);
+    }
+
+    // 4. Fetch updated user state to send back to React
+    const updatedUser = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const inventoryResult = await pool.query('SELECT item_id FROM inventory WHERE user_id = $1', [userId]);
+
+    // Format including the new equipped slots
+    const formattedUser = {
+      id: updatedUser.rows[0].id,
+      username: updatedUser.rows[0].username,
+      gems: updatedUser.rows[0].gems,
+      equipped_border: updatedUser.rows[0].equipped_border,
+      equipped_font: updatedUser.rows[0].equipped_font,
+      equipped_theme: updatedUser.rows[0].equipped_theme,
+      inventory: inventoryResult.rows.map(row => row.item_id)
+    };
+
+    res.json({ user: formattedUser });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error equipping item" });
   }
 });
 
