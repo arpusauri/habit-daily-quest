@@ -6,7 +6,17 @@ const { Pool } = require("pg"); // The Postgres connection tool
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", // Untuk testing di komputer lokal
+      "http://localhost:3000", // Barangkali lokalmu pakai port 3000
+      "https://habit-daily-quest.vercel.app", // URL Live Vercel milikmu
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // --- DATABASE CONNECTION ---
