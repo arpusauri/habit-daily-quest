@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
@@ -5,18 +6,26 @@ const { Pool } = require("pg");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// JURUS SEMENTARA: Izinkan semua website mengakses API ini
-app.use(cors());
-
+// 1. MIDDLEWARE (CORS harus paling atas setelah express diinisialisasi)
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", 
+      "http://localhost:3000", 
+      "https://habit-daily-quest.vercel.app", 
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-// Test the connection when the server starts
-pool.connect((err, client, release) => {
-  if (err) {
-    return console.error("Error acquiring client", err.stack);
-  }
-  console.log("✅ Connected to PostgreSQL database successfully!");
-  release();
+// 2. DATABASE CONFIGURATION (Definisikan pool DULU sebelum dipakai)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, 
+  },
 });
 
 // The Gacha Pool (Cosmetics)
