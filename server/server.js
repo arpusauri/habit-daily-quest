@@ -37,7 +37,7 @@ app.use(
 
 // Explicitly handle pre-flight requests for all routes
 // Explicitly handle pre-flight requests for all routes
-app.options('/{*splat}', cors());
+app.options(/.*/, cors());
 app.use(express.json());
 
 // ==========================================
@@ -77,6 +77,10 @@ const COSMETIC_POOL = [
     chance: 0.05,
   },
 ];
+
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "🚀 Backend is alive and running!" });
+});
 
 // ==========================================
 // 3. API ROUTES
