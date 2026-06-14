@@ -6,7 +6,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_URL =
   window.location.hostname === "localhost"
     ? "http://localhost:5000"
-    : "https://habitapi-tnzoc6d6.b4a.run";
+    : "https://habitapi-4anhd8m7.b4a.run";
 
     const ITEM_NAME_MAP = {
       r_blue: "Cyan Border",
@@ -55,26 +55,58 @@ function App() {
       .catch((err) => console.error("Error:", err));
   }, []);
 
+  // SESUDAH:
   const completeHabit = (habitId) => {
-    playSound("complete"); // Suara klik awal
-    const oldLevel = userData.level || 1; // Simpan level saat ini di memori sementara
+    // Update UI langsung
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === habitId
+          ? { ...h, is_completed: true, streak: h.streak + 1 }
+          : h,
+      ),
+    );
+    setUserData((prev) => ({
+      ...prev,
+      gems: prev.gems + 30,
+      exp: (prev.exp || 0) + 10 >= 100 ? 0 : (prev.exp || 0) + 10,
+      level:
+        (prev.exp || 0) + 10 >= 100 ? (prev.level || 1) + 1 : prev.level || 1,
+    }));
+    playSound("complete");
 
+    const oldLevel = userData.level || 1;
+
+    // Kirim ke server di belakang layar
     fetch(`${API_URL}/api/habits/${habitId}/complete`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
           alert(data.error);
-        } else {
-          setUserData(data.user);
-          setHabits(data.habits);
-
-          // DETEKSI NAIK LEVEL!
-          if (data.user.level > oldLevel) {
-            setTimeout(() => playSound("level_up"), 100);
-          }
+          // Rollback: ambil data asli dari server
+          fetch(`${API_URL}/api/dashboard`)
+            .then((r) => r.json())
+            .then((d) => {
+              setUserData(d.user);
+              setHabits(d.habits);
+            });
+          return;
         }
+        // Sync dengan data server yang akurat
+        setUserData(data.user);
+        setHabits(data.habits);
+        if (data.user.level > oldLevel)
+          setTimeout(() => playSound("level_up"), 100);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        // Rollback kalau network error
+        fetch(`${API_URL}/api/dashboard`)
+          .then((r) => r.json())
+          .then((d) => {
+            setUserData(d.user);
+            setHabits(d.habits);
+          });
+      });
   };
 
   const rollGacha = async () => {
@@ -218,9 +250,19 @@ function App() {
   };
 
   const addHabit = (e) => {
-    e.preventDefault(); // Prevents the browser from reloading the page
-
+    e.preventDefault();
     if (!newHabitName.trim()) return;
+
+    // Optimistic: tambah langsung ke UI
+    const tempId = `temp_${Date.now()}`;
+    const tempHabit = {
+      id: tempId,
+      name: newHabitName,
+      streak: 0,
+      is_completed: false,
+    };
+    setHabits((prev) => [...prev, tempHabit]);
+    setNewHabitName("");
 
     fetch(`${API_URL}/api/habits`, {
       method: "POST",
@@ -231,33 +273,62 @@ function App() {
       .then((data) => {
         if (data.error) {
           alert(data.error);
-        } else {
-          setHabits(data.habits); // Update the list with the fresh database rows
-          setNewHabitName(""); // Clear the input box!
+          setHabits((prev) => prev.filter((h) => h.id !== tempId)); // rollback
+          return;
         }
+        // Ganti temp dengan data asli dari server
+        setHabits(data.habits);
       })
-      .catch((err) => console.error("Error adding habit:", err));
+      .catch((err) => {
+        console.error("Error adding habit:", err);
+        setHabits((prev) => prev.filter((h) => h.id !== tempId)); // rollback
+      });
   };
 
   const deleteHabit = (habitId) => {
-    // Optional: Add a quick confirmation so users don't delete by accident
     if (!window.confirm("Are you sure you want to delete this quest?")) return;
 
-    fetch(`${API_URL}/api/habits/${habitId}`, {
-      method: "DELETE",
-    })
+    // Optimistic: simpan dulu untuk rollback, lalu hapus dari UI
+    setHabits((prev) => {
+      const deleted = prev.find((h) => h.id === habitId);
+      deletedHabitRef.current = deleted;
+      return prev.filter((h) => h.id !== habitId);
+    });
+
+    fetch(`${API_URL}/api/habits/${habitId}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
           alert(data.error);
-        } else {
-          setHabits(data.habits); // Update the UI with the fresh list
+          setHabits((prev) => [...prev, deletedHabitRef.current]); // rollback
+          return;
         }
+        setHabits(data.habits);
       })
-      .catch((err) => console.error("Error deleting habit:", err));
+      .catch((err) => {
+        console.error("Error deleting habit:", err);
+        setHabits((prev) => [...prev, deletedHabitRef.current]); // rollback
+      });
   };
 
+  const deletedHabitRef = useRef(null);
+
+  // SESUDAH:
   const equipItem = (itemId) => {
+    // Update UI langsung tanpa tunggu server
+    setUserData((prev) => {
+      const isTheme = ["sr_dark", "ssr_matrix"].includes(itemId);
+      const isBorder = itemId === "r_blue";
+      const isFont = ["r_pink", "sr_gold"].includes(itemId);
+      return {
+        ...prev,
+        equipped_theme: isTheme ? itemId : prev.equipped_theme,
+        equipped_border: isBorder ? itemId : prev.equipped_border,
+        equipped_font: isFont ? itemId : prev.equipped_font,
+      };
+    });
+
+    // Kirim ke server di belakang layar
     fetch(`${API_URL}/api/gacha/equip`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -265,8 +336,11 @@ function App() {
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.error) alert(data.error);
-        else setUserData(data.user);
+        if (data.error) {
+          alert(data.error);
+          // Rollback kalau server error
+          setUserData((prev) => ({ ...prev }));
+        }
       })
       .catch((err) => console.error("Error equipping:", err));
   };
@@ -400,7 +474,6 @@ function App() {
           >
             🚀 Pull 1x (50 Gems)
           </button>
-
         </div>
 
         {/* Section Judul Daily Quests */}
