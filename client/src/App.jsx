@@ -11,6 +11,9 @@ import ItemIndex from "./components/ItemIndex";
 import GachaOverlay from "./components/GachaOverlay";
 // import utils
 import { playSound } from "./utils/soundEngine";
+// import supabase
+import { supabase } from "./supabaseClient";
+import AuthPage from "./AuthPage";
 
 // Helper untuk menghentikan kode sementara (jeda waktu)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,26 +24,26 @@ const API_URL =
     ? "http://localhost:5000"
     : "https://habit-daily-api.bonto.run";
 
-    const ITEM_NAME_MAP = {
-      r_blue: "Cyan Border",
-      r_pink: "Pink Text Font",
-      sr_dark: "Obsidian Dark Theme",
-      sr_gold: "Golden Name Tag",
-      ssr_matrix: "Animated Cyberpunk Matrix",
-    };
+const ITEM_NAME_MAP = {
+  r_blue: "Cyan Border",
+  r_pink: "Pink Text Font",
+  sr_dark: "Obsidian Dark Theme",
+  sr_gold: "Golden Name Tag",
+  ssr_matrix: "Animated Cyberpunk Matrix",
+};
 
-    const POOL_ITEMS = [
-      "Cyan Border",
-      "Pink Text Font",
-      "Obsidian Dark Theme",
-      "Golden Name Tag",
-      "Animated Cyberpunk Matrix",
-      "Cyan Border",
-      "Pink Text Font",
-      "Obsidian Dark Theme",
-      "Cyan Border",
-      "Golden Name Tag",
-    ];
+const POOL_ITEMS = [
+  "Cyan Border",
+  "Pink Text Font",
+  "Obsidian Dark Theme",
+  "Golden Name Tag",
+  "Animated Cyberpunk Matrix",
+  "Cyan Border",
+  "Pink Text Font",
+  "Obsidian Dark Theme",
+  "Cyan Border",
+  "Golden Name Tag",
+];
 
 function App() {
   const [userData, setUserData] = useState({
@@ -49,7 +52,6 @@ function App() {
     inventory: [],
   });
   const [habits, setHabits] = useState([]);
-  // TAMBAH ini:
   const [overlayVisible, setOverlayVisible] = useState(false);
   const [gachaResult, setGachaResult] = useState(null);
   const [newHabitName, setNewHabitName] = useState("");
@@ -57,20 +59,57 @@ function App() {
   const [isRolling, setIsRolling] = useState(false);
   const [currentRollItem, setCurrentRollItem] = useState("???");
   const [showItemIndex, setShowItemIndex] = useState(false);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const rollIntervalRef = useRef(null);
   const rollTimeoutRef = useRef(null);
+  const skipRef = useRef(false);
+  const deletedHabitRef = useRef(null);
 
+  // ── AUTH SESSION ──────────────────────────────────────────────────────────
   useEffect(() => {
-    // 2. UPDATED FETCH
-    fetch(`${API_URL}/api/dashboard`)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // ── DASHBOARD FETCH ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!session) return;
+
+    fetch(`${API_URL}/api/dashboard`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         setUserData(data.user);
         setHabits(data.habits);
       })
       .catch((err) => console.error("Error:", err));
-  }, []);
+  }, [session]);
+
+  // ── HELPER authFetch ──────────────────────────────────────────────────────
+  const authFetch = (url, options = {}) => {
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+  };
 
   const completeHabit = (habitId) => {
     playSound("complete");
@@ -87,7 +126,7 @@ function App() {
 
     const currentExp = userData.exp || 0;
     const currentLevel = userData.level || 1;
-    const newExp = currentExp + 10;
+    const newExp = currentExp + 50;
     const levelUp = newExp >= 100;
 
     setUserData((prev) => ({
@@ -100,12 +139,12 @@ function App() {
     if (levelUp) setTimeout(() => playSound("level_up"), 100);
 
     // Sync server di belakang
-    fetch(`${API_URL}/api/habits/${habitId}/complete`, { method: "POST" })
+    authFetch(`${API_URL}/api/habits/${habitId}/complete`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
           alert(data.error);
-          fetch(`${API_URL}/api/dashboard`)
+          authFetch(`${API_URL}/api/dashboard`)
             .then((r) => r.json())
             .then((d) => {
               setUserData(d.user);
@@ -115,9 +154,11 @@ function App() {
         }
         setUserData(data.user);
         setHabits(data.habits);
+        if (data.user.level > oldLevel)
+          setTimeout(() => playSound("level_up"), 100);
       })
       .catch(() => {
-        fetch(`${API_URL}/api/dashboard`)
+        authFetch(`${API_URL}/api/dashboard`)
           .then((r) => r.json())
           .then((d) => {
             setUserData(d.user);
@@ -141,14 +182,13 @@ function App() {
     playSound("pull_click");
 
     try {
-      const fetchPromise = fetch(`${API_URL}/api/gacha/pull`, {
+      const fetchPromise = authFetch(`${API_URL}/api/gacha/pull`, {
         method: "POST",
       }).then((res) => res.json());
 
       // --- LOOP ANIMASI 1 ---
       let delay = 30;
       for (let i = 0; i < 30; i++) {
-        // JIKA DISKIP: Berhenti melakukan animasi!
         if (skipRef.current) break;
 
         setCurrentRollItem(POOL_ITEMS[i % POOL_ITEMS.length]);
@@ -158,7 +198,6 @@ function App() {
         else delay += 4;
       }
 
-      // Tunggu server membalas (kalau user skip di detik 1, kita tetap harus nunggu hasil dari server)
       const data = await fetchPromise;
 
       if (data.error) {
@@ -173,10 +212,9 @@ function App() {
         ITEM_NAME_MAP[resultItem?.id] || resultItem?.name || "???";
 
       // --- LOOP ANIMASI 2 (Perlambatan Akhir) ---
-      // Hanya jalankan kalau belum diskip
       if (!skipRef.current) {
         for (let i = 0; i < 6; i++) {
-          if (skipRef.current) break; // Cek lagi, barangkali diskip saat animasi lambat
+          if (skipRef.current) break;
 
           setCurrentRollItem(
             i % 2 === 0 ? POOL_ITEMS[i % POOL_ITEMS.length] : resultName,
@@ -185,7 +223,6 @@ function App() {
           await sleep(300 + i * 100);
         }
 
-        // Jeda detik terakhir sebelum jederrr muncul hasilnya (kalau tidak diskip)
         if (!skipRef.current) {
           setCurrentRollItem(resultName);
           await sleep(100);
@@ -193,11 +230,10 @@ function App() {
       }
 
       // --- FASE AKHIR (HASIL) ---
-      // Bagian ini akan langsung dieksekusi jika diskip (karena loop di atas di-break)
       setCurrentRollItem(resultName);
       setGachaResult(resultItem);
       setUserData(data.user);
-      setIsRolling(false); // Mematikan animasi, ganti ke mode result
+      setIsRolling(false);
 
       if (resultItem?.id?.startsWith("ssr_")) playSound("ssr_drop");
       else playSound("complete");
@@ -213,18 +249,14 @@ function App() {
     setGachaResult(null);
   };
 
-  const skipRef = useRef(false);
-
-  // 3. Update fungsi skip ini
   const handleSkipAnimation = () => {
-    skipRef.current = true; // Angkat bendera skip!
+    skipRef.current = true;
   };
 
   const addHabit = (e) => {
     e.preventDefault();
     if (!newHabitName.trim()) return;
 
-    // Optimistic: tambah langsung ke UI
     const tempId = `temp_${Date.now()}`;
     const tempHabit = {
       id: tempId,
@@ -235,7 +267,7 @@ function App() {
     setHabits((prev) => [...prev, tempHabit]);
     setNewHabitName("");
 
-    fetch(`${API_URL}/api/habits`, {
+    authFetch(`${API_URL}/api/habits`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newHabitName }),
@@ -244,49 +276,43 @@ function App() {
       .then((data) => {
         if (data.error) {
           alert(data.error);
-          setHabits((prev) => prev.filter((h) => h.id !== tempId)); // rollback
+          setHabits((prev) => prev.filter((h) => h.id !== tempId));
           return;
         }
-        // Ganti temp dengan data asli dari server
         setHabits(data.habits);
       })
       .catch((err) => {
         console.error("Error adding habit:", err);
-        setHabits((prev) => prev.filter((h) => h.id !== tempId)); // rollback
+        setHabits((prev) => prev.filter((h) => h.id !== tempId));
       });
   };
 
   const deleteHabit = (habitId) => {
     if (!window.confirm("Are you sure you want to delete this quest?")) return;
 
-    // Optimistic: simpan dulu untuk rollback, lalu hapus dari UI
     setHabits((prev) => {
       const deleted = prev.find((h) => h.id === habitId);
       deletedHabitRef.current = deleted;
       return prev.filter((h) => h.id !== habitId);
     });
 
-    fetch(`${API_URL}/api/habits/${habitId}`, { method: "DELETE" })
+    authFetch(`${API_URL}/api/habits/${habitId}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
           alert(data.error);
-          setHabits((prev) => [...prev, deletedHabitRef.current]); // rollback
+          setHabits((prev) => [...prev, deletedHabitRef.current]);
           return;
         }
         setHabits(data.habits);
       })
       .catch((err) => {
         console.error("Error deleting habit:", err);
-        setHabits((prev) => [...prev, deletedHabitRef.current]); // rollback
+        setHabits((prev) => [...prev, deletedHabitRef.current]);
       });
   };
 
-  const deletedHabitRef = useRef(null);
-
-  // SESUDAH:
   const equipItem = (itemId) => {
-    // Update UI langsung tanpa tunggu server
     setUserData((prev) => {
       const isTheme = ["sr_dark", "ssr_matrix"].includes(itemId);
       const isBorder = itemId === "r_blue";
@@ -299,8 +325,7 @@ function App() {
       };
     });
 
-    // Kirim ke server di belakang layar
-    fetch(`${API_URL}/api/gacha/equip`, {
+    authFetch(`${API_URL}/api/gacha/equip`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ itemId }),
@@ -309,7 +334,6 @@ function App() {
       .then((data) => {
         if (data.error) {
           alert(data.error);
-          // Rollback kalau server error
           setUserData((prev) => ({ ...prev }));
         }
       })
@@ -338,7 +362,6 @@ function App() {
         ? "text-pink-400 font-serif italic font-bold tracking-wide"
         : "text-white font-bold";
 
-  // Dynamic quest card themes based on equipped cosmetics
   const questCardStyle = (isCompleted) => {
     if (isMatrixMode) {
       return isCompleted
@@ -352,19 +375,27 @@ function App() {
         : "bg-slate-800 border border-slate-700 text-slate-100 hover:border-slate-600 shadow-sm";
     }
 
-    // Default light mode fallback
     return isCompleted
       ? "bg-green-50 border border-green-200 text-green-800"
       : "bg-white border border-gray-200 text-gray-800 hover:shadow-md transition-shadow";
   };
 
-  // Quick helper to tweak text styling inside the quest cards
   const questTitleStyle = (isCompleted) => {
     if (isCompleted) return "line-through opacity-60 font-medium";
     return isMatrixMode
       ? "text-green-400 font-bold"
       : "text-gray-900 dark:text-white font-bold";
   };
+
+  // ── AUTH GUARD ────────────────────────────────────────────────────────────
+  if (authLoading)
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-white">Loading...</p>
+      </div>
+    );
+
+  if (!session) return <AuthPage onLogin={setSession} apiUrl={API_URL} />;
 
   return (
     <div className={`${appBackground} min-h-screen-mobile p-4`}>
@@ -374,12 +405,13 @@ function App() {
           userData={userData}
           userCardBorder={userCardBorder}
           nameTagStyle={nameTagStyle}
+          onLogout={() => supabase.auth.signOut()}
         />
 
         {/* Section Gacha*/}
         <GachaSection rollGacha={rollGacha} isRolling={isRolling} />
 
-        {/* Quest Quest*/}
+        {/* Quest Section*/}
         <QuestSection
           habits={habits}
           newHabitName={newHabitName}
@@ -408,7 +440,6 @@ function App() {
           isRolling={isRolling}
           currentRollItem={currentRollItem}
           gachaResult={gachaResult}
-          // 2. MODIFIKASI DI SINI: Set result jadi null DAN matikan overlayVisible agar overlay tertutup
           closeOverlay={() => {
             setGachaResult(null);
             setOverlayVisible(false);

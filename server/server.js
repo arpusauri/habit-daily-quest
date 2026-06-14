@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
+const { createClient } = require("@supabase/supabase-js"); // 1. Import Supabase SDK
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -9,8 +10,6 @@ const PORT = process.env.PORT || 5000;
 // ==========================================
 // 1. MIDDLEWARE CONFIGURATION
 // ==========================================
-
-// Let the cors library handle the array matching natively
 const corsOptions = {
   origin: [
     "http://localhost:5173",
@@ -23,12 +22,11 @@ const corsOptions = {
   credentials: true,
 };
 
-// Apply CORS globally. This automatically handles OPTIONS pre-flights safely.
 app.use(cors(corsOptions));
 app.use(express.json());
 
 // ==========================================
-// 2. DATABASE CONFIGURATION & CONNECTION
+// 2. DATABASE & SUPABASE AUTH CONFIGURATION
 // ==========================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,7 +35,19 @@ const pool = new Pool({
   },
 });
 
-// Test koneksi database saat server pertama kali menyala
+// Ambil token dengan fallback (jika pakai awalan VITE_ tetap terbaca)
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+
+// Validasi manual sebelum crash agar ketahuan jika kosong
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("❌ ERROR: Supabase URL atau Anon Key tidak ditemukan di file .env!");
+  process.exit(1);
+}
+
+// Inisialisasi Klien Supabase Auth
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 pool.connect((err, client, release) => {
   if (err) {
     return console.error("❌ Error acquiring client", err.stack);
@@ -45,6 +55,53 @@ pool.connect((err, client, release) => {
   console.log("✅ Connected to PostgreSQL database successfully!");
   release();
 });
+
+// ==========================================
+// 3. AUTHENTICATION MIDDLEWARE (Kunci Pengaman)
+// ==========================================
+const authenticateUser = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ error: "Akses ditolak. Token tidak ditemukan." });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    // Verifikasi token langsung ke Supabase Auth
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res
+        .status(401)
+        .json({ error: "Sesi kedaluwarsa atau token tidak valid." });
+    }
+
+    // Cari ID integer user berdasarkan UUID Supabase Auth
+    const dbUser = await pool.query(
+      "SELECT id FROM users WHERE supabase_uid = $1",
+      [user.id],
+    );
+
+    if (dbUser.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Profil pemain tidak ditemukan di database game." });
+    }
+
+    // Mengikat ID asli database ke request agar bisa dipakai oleh endpoint di bawahnya
+    req.userId = dbUser.rows[0].id;
+    next();
+  } catch (err) {
+    console.error("Auth Middleware Error:", err.message);
+    res.status(500).json({ error: "Sistem otentikasi internal error." });
+  }
+};
 
 // Gacha Pool Data (Cosmetics)
 const COSMETIC_POOL = [
@@ -70,13 +127,76 @@ app.get("/", (req, res) => {
 });
 
 // ==========================================
-// 3. API ROUTES
+// 4. AUTH ROUTES (Register & Login)
 // ==========================================
 
-// [GET] Dashboard Data (With Daily Reset)
-app.get("/api/dashboard", async (req, res) => {
+// [POST] Register Akun Baru
+app.post("/api/auth/register", async (req, res) => {
   try {
-    const userId = 1;
+    const { email, password, username } = req.body;
+    if (!email || !password || !username) {
+      return res
+        .status(400)
+        .json({ error: "Email, password, dan username wajib diisi!" });
+    }
+
+    // 1. Daftarkan akun kredensial ke sistem Supabase Auth
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return res.status(400).json({ error: error.message });
+    if (!data.user)
+      return res.status(400).json({ error: "Registrasi gagal dilakukan." });
+
+    // 2. Masukkan profil ke tabel game umum kita menggunakan UUID jembatan
+    await pool.query(
+      `INSERT INTO "users" (username, gems, level, exp, supabase_uid) 
+       VALUES ($1, 1000, 1, 0, $2)`,
+      [username.trim(), data.user.id],
+    );
+
+    res.status(201).json({
+      message:
+        "Registrasi berhasil! Silakan cek email untuk verifikasi jika diaktifkan.",
+      session: data.session,
+    });
+  } catch (err) {
+    console.error("Register Error:", err.message);
+    res.status(500).json({ error: "Server error saat mendaftarkan user." });
+  }
+});
+
+// [POST] Login Akun
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email dan password wajib diisi!" });
+    }
+
+    // Login ke Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.json({
+      message: "Login sukses!",
+      session: data.session, // Kirim data session (mengandung access_token) ke frontend
+    });
+  } catch (err) {
+    console.error("Login Error:", err.message);
+    res.status(500).json({ error: "Server error saat login." });
+  }
+});
+
+// ==========================================
+// 5. SECURE GAME ROUTES (Diproteksi Token)
+// ==========================================
+
+// [GET] Dashboard Data (Diubah dari ID=1 ke Dinamis req.userId)
+app.get("/api/dashboard", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId; // Dapatkan ID dari middleware aman
 
     const userResult = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
@@ -132,15 +252,16 @@ app.get("/api/dashboard", async (req, res) => {
   }
 });
 
-// [POST] Complete a habit (Earn gems + EXP & Level Up)
-app.post("/api/habits/:id/complete", async (req, res) => {
+// [POST] Complete a habit
+app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
   try {
     const habitId = parseInt(req.params.id);
-    const userId = 1;
+    const userId = req.userId;
 
-    const habitCheck = await pool.query("SELECT * FROM habits WHERE id = $1", [
-      habitId,
-    ]);
+    const habitCheck = await pool.query(
+      "SELECT * FROM habits WHERE id = $1 AND user_id = $2",
+      [habitId, userId],
+    );
     if (habitCheck.rows.length === 0)
       return res.status(404).json({ error: "Habit not found" });
     if (habitCheck.rows[0].is_completed)
@@ -196,10 +317,10 @@ app.post("/api/habits/:id/complete", async (req, res) => {
 });
 
 // [POST] Create a new habit
-app.post("/api/habits", async (req, res) => {
+app.post("/api/habits", authenticateUser, async (req, res) => {
   try {
     const { name } = req.body;
-    const userId = 1;
+    const userId = req.userId;
 
     if (!name || name.trim() === "") {
       return res.status(400).json({ error: "Habit name cannot be empty!" });
@@ -222,10 +343,10 @@ app.post("/api/habits", async (req, res) => {
 });
 
 // [POST] Equip a cosmetic item
-app.post("/api/gacha/equip", async (req, res) => {
+app.post("/api/gacha/equip", authenticateUser, async (req, res) => {
   try {
     const { itemId } = req.body;
-    const userId = 1;
+    const userId = req.userId;
 
     const checkOwn = await pool.query(
       "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
@@ -275,10 +396,10 @@ app.post("/api/gacha/equip", async (req, res) => {
 });
 
 // [DELETE] Delete a habit
-app.delete("/api/habits/:id", async (req, res) => {
+app.delete("/api/habits/:id", authenticateUser, async (req, res) => {
   try {
     const habitId = parseInt(req.params.id);
-    const userId = 1;
+    const userId = req.userId;
 
     await pool.query("DELETE FROM habits WHERE id = $1 AND user_id = $2", [
       habitId,
@@ -297,9 +418,9 @@ app.delete("/api/habits/:id", async (req, res) => {
 });
 
 // [POST] Gacha Pull Route
-app.post("/api/gacha/pull", async (req, res) => {
+app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
   try {
-    const userId = 1;
+    const userId = req.userId;
 
     const userCheck = await pool.query("SELECT gems FROM users WHERE id = $1", [
       userId,
@@ -357,7 +478,7 @@ app.post("/api/gacha/pull", async (req, res) => {
 });
 
 // ==========================================
-// 4. SERVER INITIALIZATION 
+// 6. SERVER INITIALIZATION
 // ==========================================
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Backend server running on port ${PORT}`);
