@@ -1,1 +1,26 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   MOBILE & PWA GAME OPTIMIZATION
+   ========================================================================== */
+
+body {
+  margin: 0;
+  background-color: #030712; /* Warna gray-950 agar senada dengan tema game */
+  
+  /* 1. Mencegah teks ter-blok secara tidak sengaja saat user buru-buru spam tombol */
+  -webkit-user-select: none;
+  user-select: none;
+  
+  /* 2. Membuat efek scrolling di HP terasa kenyal dan mulus seperti aplikasi native */
+  -webkit-overflow-scrolling: touch;
+  
+  /* 3. Menghilangkan kedipan kotak abu/biru bawaan browser HP saat tombol di-tap */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 4. Solusi untuk mengatasi masalah tinggi layar (address bar) di Safari dan Chrome mobile */
+.min-h-screen-mobile {
+  min-height: 100vh;
+  min-height: 100dvh; /* Menggunakan Dynamic Viewport Height modern */
+}

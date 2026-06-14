@@ -367,7 +367,7 @@ function App() {
   };
 
   return (
-    <div className={appBackground}>
+    <div className={`${appBackground} min-h-screen-mobile p-4`}>
       <div className="max-w-xl mx-auto">
         {/* Section User Profile*/}
         <UserProfile
@@ -408,10 +408,15 @@ function App() {
           isRolling={isRolling}
           currentRollItem={currentRollItem}
           gachaResult={gachaResult}
-          closeOverlay={() => setGachaResult(null)}
+          // 2. MODIFIKASI DI SINI: Set result jadi null DAN matikan overlayVisible agar overlay tertutup
+          closeOverlay={() => {
+            setGachaResult(null);
+            setOverlayVisible(false);
+          }}
           skipRoll={handleSkipAnimation}
         />
       )}
+
       {/* Item Index Overlay */}
       {showItemIndex && (
         <ItemIndex
