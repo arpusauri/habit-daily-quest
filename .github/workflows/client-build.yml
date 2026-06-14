@@ -1,0 +1,26 @@
+name: Build Client (Frontend)
+
+on:
+  push:
+    branches: [ "main" ]
+    # Trik Monorepo: Pipeline ini HANYA jalan kalau ada perubahan di folder 'client'
+    paths:
+      - 'client/**'
+
+jobs:
+  build-client:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & Build Frontend
+        run: |
+          cd client
+          npm install
+          npm run build
