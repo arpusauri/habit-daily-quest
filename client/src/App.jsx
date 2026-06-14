@@ -55,9 +55,11 @@ function App() {
       .catch((err) => console.error("Error:", err));
   }, []);
 
-  // SESUDAH:
   const completeHabit = (habitId) => {
-    // Update UI langsung
+    playSound("complete");
+    const oldLevel = userData.level || 1;
+
+    // Optimistic update
     setHabits((prev) =>
       prev.map((h) =>
         h.id === habitId
@@ -65,24 +67,27 @@ function App() {
           : h,
       ),
     );
+
+    const currentExp = userData.exp || 0;
+    const currentLevel = userData.level || 1;
+    const newExp = currentExp + 10;
+    const levelUp = newExp >= 100;
+
     setUserData((prev) => ({
       ...prev,
       gems: prev.gems + 30,
-      exp: (prev.exp || 0) + 10 >= 100 ? 0 : (prev.exp || 0) + 10,
-      level:
-        (prev.exp || 0) + 10 >= 100 ? (prev.level || 1) + 1 : prev.level || 1,
+      exp: levelUp ? newExp - 100 : newExp,
+      level: levelUp ? currentLevel + 1 : currentLevel,
     }));
-    playSound("complete");
 
-    const oldLevel = userData.level || 1;
+    if (levelUp) setTimeout(() => playSound("level_up"), 100);
 
-    // Kirim ke server di belakang layar
+    // Sync server di belakang
     fetch(`${API_URL}/api/habits/${habitId}/complete`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
           alert(data.error);
-          // Rollback: ambil data asli dari server
           fetch(`${API_URL}/api/dashboard`)
             .then((r) => r.json())
             .then((d) => {
@@ -91,15 +96,10 @@ function App() {
             });
           return;
         }
-        // Sync dengan data server yang akurat
         setUserData(data.user);
         setHabits(data.habits);
-        if (data.user.level > oldLevel)
-          setTimeout(() => playSound("level_up"), 100);
       })
-      .catch((err) => {
-        console.error(err);
-        // Rollback kalau network error
+      .catch(() => {
         fetch(`${API_URL}/api/dashboard`)
           .then((r) => r.json())
           .then((d) => {
