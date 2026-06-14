@@ -6,6 +6,7 @@ import UserProfile from "./components/UserProfileSection";
 import GachaSection from "./components/GachaSection";
 import QuestSection from "./components/QuestSection";
 import Inventory from "./components/InventorySection";
+import ItemIndex from "./components/ItemIndex";
 //import overlays
 import GachaOverlay from "./components/GachaOverlay";
 // import utils
@@ -55,6 +56,10 @@ function App() {
   const [selectedRarityFilter, setSelectedRarityFilter] = useState("ALL");
   const [isRolling, setIsRolling] = useState(false);
   const [currentRollItem, setCurrentRollItem] = useState("???");
+  const [showItemIndex, setShowItemIndex] = useState(false);
+
+  const rollIntervalRef = useRef(null);
+  const rollTimeoutRef = useRef(null);
 
   useEffect(() => {
     // 2. UPDATED FETCH
@@ -127,20 +132,25 @@ function App() {
       return;
     }
 
+    // Reset state & bendera skip sebelum mulai gacha baru
+    skipRef.current = false;
     setGachaResult(null);
     setCurrentRollItem("???");
     setIsRolling(true);
-    setOverlayVisible(true); // ← overlay muncul sekali, tidak akan hilang sampai kita tutup
+    setOverlayVisible(true);
     playSound("pull_click");
 
     try {
-      // Fetch dan animasi jalan BERSAMAAN
       const fetchPromise = fetch(`${API_URL}/api/gacha/pull`, {
         method: "POST",
       }).then((res) => res.json());
 
+      // --- LOOP ANIMASI 1 ---
       let delay = 30;
       for (let i = 0; i < 30; i++) {
+        // JIKA DISKIP: Berhenti melakukan animasi!
+        if (skipRef.current) break;
+
         setCurrentRollItem(POOL_ITEMS[i % POOL_ITEMS.length]);
         playSound("gacha_tick");
         await sleep(delay);
@@ -148,6 +158,7 @@ function App() {
         else delay += 4;
       }
 
+      // Tunggu server membalas (kalau user skip di detik 1, kita tetap harus nunggu hasil dari server)
       const data = await fetchPromise;
 
       if (data.error) {
@@ -161,22 +172,32 @@ function App() {
       const resultName =
         ITEM_NAME_MAP[resultItem?.id] || resultItem?.name || "???";
 
-      // Animasi perlambatan akhir
-      for (let i = 0; i < 6; i++) {
-        setCurrentRollItem(
-          i % 2 === 0 ? POOL_ITEMS[i % POOL_ITEMS.length] : resultName,
-        );
-        playSound("gacha_tick");
-        await sleep(300 + i * 100);
+      // --- LOOP ANIMASI 2 (Perlambatan Akhir) ---
+      // Hanya jalankan kalau belum diskip
+      if (!skipRef.current) {
+        for (let i = 0; i < 6; i++) {
+          if (skipRef.current) break; // Cek lagi, barangkali diskip saat animasi lambat
+
+          setCurrentRollItem(
+            i % 2 === 0 ? POOL_ITEMS[i % POOL_ITEMS.length] : resultName,
+          );
+          playSound("gacha_tick");
+          await sleep(300 + i * 100);
+        }
+
+        // Jeda detik terakhir sebelum jederrr muncul hasilnya (kalau tidak diskip)
+        if (!skipRef.current) {
+          setCurrentRollItem(resultName);
+          await sleep(100);
+        }
       }
 
+      // --- FASE AKHIR (HASIL) ---
+      // Bagian ini akan langsung dieksekusi jika diskip (karena loop di atas di-break)
       setCurrentRollItem(resultName);
-      await sleep(100);
-
-      // Set result DULU, baru matikan rolling
       setGachaResult(resultItem);
       setUserData(data.user);
-      setIsRolling(false); // overlay tetap visible, hanya switch isi
+      setIsRolling(false); // Mematikan animasi, ganti ke mode result
 
       if (resultItem?.id?.startsWith("ssr_")) playSound("ssr_drop");
       else playSound("complete");
@@ -190,6 +211,13 @@ function App() {
   const closeOverlay = () => {
     setOverlayVisible(false);
     setGachaResult(null);
+  };
+
+  const skipRef = useRef(false);
+
+  // 3. Update fungsi skip ini
+  const handleSkipAnimation = () => {
+    skipRef.current = true; // Angkat bendera skip!
   };
 
   const addHabit = (e) => {
@@ -365,12 +393,12 @@ function App() {
           questTitleStyle={questTitleStyle}
         />
 
-        {/* Item Inventory Section*/}
         <Inventory
           userData={userData}
           selectedRarityFilter={selectedRarityFilter}
           setSelectedRarityFilter={setSelectedRarityFilter}
           equipItem={equipItem}
+          setShowItemIndex={setShowItemIndex}
         />
       </div>
 
@@ -380,7 +408,15 @@ function App() {
           isRolling={isRolling}
           currentRollItem={currentRollItem}
           gachaResult={gachaResult}
-          closeOverlay={closeOverlay}
+          closeOverlay={() => setGachaResult(null)}
+          skipRoll={handleSkipAnimation}
+        />
+      )}
+      {/* Item Index Overlay */}
+      {showItemIndex && (
+        <ItemIndex
+          userData={userData}
+          onClose={() => setShowItemIndex(false)}
         />
       )}
     </div>

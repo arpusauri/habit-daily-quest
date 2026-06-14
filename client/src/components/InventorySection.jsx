@@ -5,59 +5,48 @@ const Inventory = ({
   selectedRarityFilter,
   setSelectedRarityFilter,
   equipItem,
+  setShowItemIndex,
 }) => {
   if (!userData) return null;
 
   return (
-    <div className="w-full">
-      {/* Updated Interactive Inventory */}
-      <h3 className="mt-10 text-xl font-bold mb-4">
-        🎒 Unlocked Inventory ({userData.inventory?.length || 0})
-      </h3>
-
-      {/* Rarity Filter Controls */}
-      <div className="flex gap-2 mb-6">
-        {["ALL", "R", "SR", "SSR"].map((rarity) => (
-          <button
-            key={rarity}
-            type="button"
-            onClick={() => setSelectedRarityFilter(rarity)}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all border ${
-              selectedRarityFilter === rarity
-                ? "bg-indigo-600 text-white border-indigo-500 shadow-md"
-                : "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600"
-            }`}
-          >
-            {rarity === "ALL" ? "✨ SHOW ALL" : `${rarity} RANK`}
-          </button>
-        ))}
-      </div>
-
-      {/* Master Inventory Section */}
-      <div className="w-full space-y-6 mt-10">
-        {/* Header & Filter Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-700 pb-3">
-          <h3 className="text-xl font-bold tracking-wide">🎒 Your Inventory</h3>
-
-          {/* Rarity Filter Controls (Header) */}
-          <div className="flex gap-1 bg-gray-900/60 p-1 rounded-xl border border-gray-800 self-start sm:self-auto">
-            {["ALL", "R", "SR", "SSR"].map((rarity) => (
-              <button
-                key={`header-${rarity}`}
-                type="button"
-                onClick={() => setSelectedRarityFilter(rarity)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                  selectedRarityFilter === rarity
-                    ? "bg-indigo-600 text-white shadow-md border border-indigo-500"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                {rarity === "ALL" ? "✨ SHOW ALL" : rarity}
-              </button>
-            ))}
-          </div>
+    <div className="w-full mt-8">
+      {/* --- HEADER & FILTER ROW --- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-gray-700 pb-4">
+        {/* Kiri: Title & Tombol Collection Book */}
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold tracking-wide">
+            🎒 Inventory ({userData.inventory?.length || 0})
+          </h2>
         </div>
 
+        {/* Kanan: Rarity Filter Controls */}
+        <div className="flex gap-1 bg-gray-900/60 p-1 rounded-xl border border-gray-800 self-start sm:self-auto">
+          {["ALL", "R", "SR", "SSR"].map((rarity) => (
+            <button
+              key={`header-${rarity}`}
+              type="button"
+              onClick={() => setSelectedRarityFilter(rarity)}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                selectedRarityFilter === rarity
+                  ? "bg-indigo-600 text-white shadow-md border border-indigo-500"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              {rarity === "ALL" ? "✨ SHOW ALL" : rarity}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* --- MASTER INVENTORY SECTION --- */}
+      <div className="w-full space-y-6">
+        <button
+          onClick={() => setShowItemIndex(true)}
+          className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold transition-colors shadow-md flex items-center gap-1"
+        >
+          📚 Collection Book
+        </button>
         {userData.inventory?.length === 0 ? (
           <p className="text-gray-500 italic text-center py-6">
             Your inventory is empty. Go pull on banners! 🎰
@@ -148,6 +137,7 @@ const Inventory = ({
                         : itemId.startsWith("sr_")
                           ? "SR"
                           : "R";
+
                       const rankBadgeClass =
                         rank === "SSR"
                           ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"

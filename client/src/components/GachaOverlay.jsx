@@ -5,6 +5,7 @@ const GachaOverlay = ({
   currentRollItem,
   gachaResult,
   closeOverlay,
+  skipRoll
 }) => {
   if (!isRolling && !gachaResult) return null;
 
@@ -33,13 +34,27 @@ const GachaOverlay = ({
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50">
       {/* STATE: ROLLING */}
       {isRolling && (
-        <div className="bg-gray-900 border-2 border-indigo-500 p-8 rounded-2xl max-w-sm w-full text-center mx-4 shadow-[0_0_40px_rgba(99,102,241,0.5)]">
-          <span className="text-xs font-black tracking-widest uppercase bg-gray-950 px-3 py-1 rounded-full border border-indigo-500/50 text-indigo-400 animate-pulse">
-            TUNING QUANTUM REWARDS...
-          </span>
+        <div className="bg-gray-900 border-2 border-indigo-500 p-8 rounded-2xl max-w-sm w-full text-center mx-4 shadow-[0_0_40px_rgba(99,102,241,0.5)] relative">
+          {/* 🔥 TOMBOL SKIP 🔥 */}
+          {skipRoll && (
+            <button
+              onClick={skipRoll}
+              className="absolute top-4 right-4 text-xs font-bold text-indigo-400/70 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/30 px-3 py-1.5 rounded-lg border border-indigo-500/30 hover:border-indigo-500/60 active:scale-95"
+            >
+              SKIP ⏭️
+            </button>
+          )}
+
+          <div className="mt-4">
+            <span className="text-xs font-black tracking-widest uppercase bg-gray-950 px-3 py-1 rounded-full border border-indigo-500/50 text-indigo-400 animate-pulse">
+              TUNING QUANTUM REWARDS...
+            </span>
+          </div>
+
           <h2 className="text-2xl font-black text-white mt-8 mb-8 tracking-wide min-h-[64px] flex items-center justify-center">
             {currentRollItem}
           </h2>
+
           <div className="flex justify-center gap-2">
             {[0, 150, 300].map((delay) => (
               <div
