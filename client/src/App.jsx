@@ -6,7 +6,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const API_URL =
   window.location.hostname === "localhost"
     ? "http://localhost:5000"
-    : "https://habitapi-4anhd8m7.b4a.run";
+    : "https://habit-daily-api.bonto.run";
 
     const ITEM_NAME_MAP = {
       r_blue: "Cyan Border",

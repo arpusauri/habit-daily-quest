@@ -10,19 +10,13 @@ const PORT = process.env.PORT || 5000;
 // 1. MIDDLEWARE CONFIGURATION
 // ==========================================
 
-// ==========================================
-// 1. MIDDLEWARE CONFIGURATION
-// ==========================================
-
-// Trust the Back4App reverse proxy (crucial for secure cookies and headers)
-app.set("trust proxy", 1); 
-
 // Let the cors library handle the array matching natively
 const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://habit-daily-quest.vercel.app"
+    "https://habit-daily-quest.vercel.app",
+    "https://habit-daily-api.bonto.run", // ← tambah ini
   ],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
