@@ -9,18 +9,30 @@ const Inventory = ({
 }) => {
   if (!userData) return null;
 
+  // Normalisasi data agar selalu bernilai Array (mencegah error .filter() is not a function)
+  const userInventory = Array.isArray(userData.inventory)
+    ? userData.inventory
+    : [];
+
   return (
     <div className="w-full mt-8">
-      {/* --- HEADER & FILTER ROW --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-gray-700 pb-4">
-        {/* Kiri: Title & Tombol Collection Book */}
+      {/* HEADER & FILTER ROW */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-gray-800 pb-4">
+        {/* Title & Collection Book Button */}
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold tracking-wide">
-            🎒 Inventory ({userData.inventory?.length || 0})
+          <h2 className="text-xl font-bold tracking-wide text-white">
+            🎒 Inventory ({userInventory.length})
           </h2>
+          <button
+            type="button"
+            onClick={() => setShowItemIndex(true)}
+            className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold transition-all shadow-md flex items-center gap-1 active:scale-95"
+          >
+            📚 Collection Book
+          </button>
         </div>
 
-        {/* Kanan: Rarity Filter Controls */}
+        {/* Filter Controls */}
         <div className="flex gap-1 bg-gray-900/60 p-1 rounded-xl border border-gray-800 self-start sm:self-auto">
           {["ALL", "R", "SR", "SSR"].map((rarity) => (
             <button
@@ -39,21 +51,14 @@ const Inventory = ({
         </div>
       </div>
 
-      {/* --- MASTER INVENTORY SECTION --- */}
+      {/* MASTER INVENTORY LIST */}
       <div className="w-full space-y-6">
-        <button
-          onClick={() => setShowItemIndex(true)}
-          className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-bold transition-colors shadow-md flex items-center gap-1"
-        >
-          📚 Collection Book
-        </button>
-        {userData.inventory?.length === 0 ? (
-          <p className="text-gray-500 italic text-center py-6">
-            Your inventory is empty. Go pull on banners! 🎰
+        {userInventory.length === 0 ? (
+          <p className="text-gray-500 italic text-center py-8 bg-gray-900/20 rounded-2xl border border-gray-800">
+            Inventory kamu masih kosong. Yuk pull banner gacha! 🎰
           </p>
         ) : (
           (() => {
-            // 1. Structural blueprint defining our inventory slots
             const categories = [
               {
                 id: "THEMES",
@@ -72,7 +77,6 @@ const Inventory = ({
               },
             ];
 
-            // 2. Rarity filter helper logic
             const matchesRarity = (itemId) => {
               if (selectedRarityFilter === "ALL") return true;
               if (selectedRarityFilter === "R" && itemId.startsWith("r_"))
@@ -84,38 +88,33 @@ const Inventory = ({
               return false;
             };
 
-            // 3. Count total visible matches across all slots to check for blank filters
-            const totalVisible =
-              userData.inventory.filter(matchesRarity).length;
+            const totalVisible = userInventory.filter(matchesRarity).length;
+
             if (totalVisible === 0) {
               return (
                 <p className="text-gray-500 italic text-center py-6">
-                  No {selectedRarityFilter} items currently unlocked.
+                  Tidak ada item {selectedRarityFilter} yang sudah dimiliki.
                 </p>
               );
             }
 
-            // 4. Render separated groups
             return categories.map((cat) => {
-              const itemsToRender = userData.inventory.filter(
+              const itemsToRender = userInventory.filter(
                 (itemId) =>
                   cat.itemIds.includes(itemId) && matchesRarity(itemId),
               );
 
-              // Hide the whole card if no unlocked items in this category fit the active filter
               if (itemsToRender.length === 0) return null;
 
               return (
                 <div
                   key={cat.id}
-                  className="bg-gray-900/30 p-5 rounded-2xl border border-gray-800 shadow-sm text-left"
+                  className="bg-gray-900/40 p-5 rounded-2xl border border-gray-800/80 shadow-sm text-left"
                 >
-                  {/* Group Label Banner */}
                   <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4 border-l-4 border-indigo-500 pl-2">
                     {cat.label}
                   </h4>
 
-                  {/* Grid for this specific category's items */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {itemsToRender.map((itemId) => {
                       let cleanName = "";
@@ -148,7 +147,7 @@ const Inventory = ({
                       return (
                         <div
                           key={itemId}
-                          className="bg-gray-800 text-white p-4 rounded-xl flex justify-between items-center shadow-md border border-gray-700/40 hover:border-gray-600 transition-all"
+                          className="bg-gray-800/80 text-white p-4 rounded-xl flex justify-between items-center shadow-md border border-gray-700/50 hover:border-gray-600 transition-all"
                         >
                           <div className="flex flex-col items-start">
                             <span className="text-sm font-semibold tracking-wide text-left">
@@ -167,7 +166,7 @@ const Inventory = ({
                             disabled={isEquipped}
                             className={`text-xs px-4 py-2 font-bold rounded-lg transition-all ${
                               isEquipped
-                                ? "bg-green-600/20 text-green-400 border border-green-500/40 cursor-not-allowed"
+                                ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 cursor-not-allowed"
                                 : "bg-blue-600 text-white hover:bg-blue-500 active:scale-95 shadow-sm"
                             }`}
                           >

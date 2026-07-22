@@ -7,6 +7,11 @@ import GachaSection from "./components/GachaSection";
 import QuestSection from "./components/QuestSection";
 import Inventory from "./components/InventorySection";
 import ItemIndex from "./components/ItemIndex";
+import LeaderboardModal from "./components/LeaderboardModal";
+import Sidebar from "./components/Sidebar";
+import ShopOverlay from "./components/ShopOverlay";
+import BannerOverlay from "./components/BannerOverlay";
+import LeaderboardOverlay from "./components/LeaderboardOverlay";
 //import overlays
 import GachaOverlay from "./components/GachaOverlay";
 // import utils
@@ -14,7 +19,6 @@ import { playSound } from "./utils/soundEngine";
 // import supabase
 import { supabase } from "./supabaseClient";
 import AuthPage from "./AuthPage";
-import LeaderboardModal from "./components/LeaderboardModal";
 
 // Helper untuk menghentikan kode sementara (jeda waktu)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -52,6 +56,7 @@ function App() {
     gems: 0,
     inventory: [],
   });
+
   const [habits, setHabits] = useState([]);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const [gachaResult, setGachaResult] = useState(null);
@@ -68,6 +73,8 @@ function App() {
   const skipRef = useRef(false);
   const deletedHabitRef = useRef(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+  const [showShop, setShowShop] = useState(false);
 
   // ── AUTH SESSION ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -415,10 +422,28 @@ function App() {
 
   if (!session) return <AuthPage onLogin={setSession} apiUrl={API_URL} />;
 
+  const closeGachaOverlay = () => {
+    setGachaResult(null);
+    setIsRolling(false);
+  };
+
+  // 2. Fungsi untuk lewati (skip) animasi gacha
+  const skipRoll = () => {
+    skipRef.current = true;
+    setIsRolling(false);
+  };
+
   return (
-    <div className={`${appBackground} min-h-screen-mobile p-4`}>
+    <div className={`${appBackground} min-h-screen-mobile p-4 relative`}>
+      {/* 1. Sidebar Navigasi */}
+      <Sidebar
+        onOpenLeaderboard={() => setShowLeaderboard(true)}
+        onOpenBanner={() => setShowBanner(true)}
+        onOpenShop={() => setShowShop(true)}
+      />
+
       <div className="max-w-xl mx-auto space-y-4">
-        {/* 1. User Profile */}
+        {/* User Profile */}
         <UserProfile
           userData={userData}
           userCardBorder={userCardBorder}
@@ -426,18 +451,7 @@ function App() {
           onLogout={() => supabase.auth.signOut()}
         />
 
-        {/* 2. Tombol Leaderboard */}
-        <button
-          onClick={() => setShowLeaderboard(true)}
-          className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-black shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
-        >
-          🏆 GLOBAL LEADERBOARD
-        </button>
-
-        {/* 3. Section Gacha */}
-        <GachaSection rollGacha={rollGacha} isRolling={isRolling} />
-
-        {/* 4. Section Quest (DITAMBAHKAN KEMBALI) */}
+        {/* Quest Section */}
         <QuestSection
           habits={habits}
           newHabitName={newHabitName}
@@ -451,7 +465,7 @@ function App() {
           questTitleStyle={questTitleStyle}
         />
 
-        {/* 5. Section Inventory (DITAMBAHKAN KEMBALI) */}
+        {/* Inventory Section */}
         <Inventory
           userData={userData}
           selectedRarityFilter={selectedRarityFilter}
@@ -461,17 +475,24 @@ function App() {
         />
       </div>
 
-      {/* Overlays (DITAMBAHKAN KEMBALI) */}
-      {overlayVisible && (
-        <GachaOverlay
-          isRolling={isRolling}
-          currentRollItem={currentRollItem}
-          gachaResult={gachaResult}
-          closeOverlay={closeOverlay}
-          skipRoll={handleSkipAnimation}
-        />
-      )}
+      {/* OVERLAY 1: LEADERBOARD */}
+      <LeaderboardOverlay
+        isOpen={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+      />
 
+      {/* OVERLAY 2: GACHA BANNERS */}
+      <BannerOverlay
+        isOpen={showBanner}
+        onClose={() => setShowBanner(false)}
+        rollGacha={rollGacha}
+        isRolling={isRolling}
+      />
+
+      {/* OVERLAY 3: ITEM SHOP */}
+      <ShopOverlay isOpen={showShop} onClose={() => setShowShop(false)} />
+
+      {/* OVERLAY 4: ITEM INDEX */}
       {showItemIndex && (
         <ItemIndex
           userData={userData}
@@ -479,10 +500,14 @@ function App() {
         />
       )}
 
-      {/* Modal Leaderboard */}
-      {showLeaderboard && (
-        <LeaderboardModal onClose={() => setShowLeaderboard(false)} />
-      )}
+      {/* 🔥 OVERLAY 5: GACHA ANIMATION & RESULT 🔥 */}
+      <GachaOverlay
+        isRolling={isRolling}
+        currentRollItem={currentRollItem}
+        gachaResult={gachaResult}
+        closeOverlay={closeGachaOverlay}
+        skipRoll={skipRoll}
+      />
     </div>
   );
 }

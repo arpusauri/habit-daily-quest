@@ -1,16 +1,26 @@
 import React from "react";
 
 const GachaOverlay = ({
-  isRolling,
-  currentRollItem,
-  gachaResult,
-  closeOverlay,
-  skipRoll
+  isRolling = false,
+  currentRollItem = "...",
+  gachaResult = null,
+  closeOverlay = () => {},
+  skipRoll = null,
 }) => {
+  // 1. Sembunyikan overlay jika tidak sedang rolling dan tidak ada hasil
   if (!isRolling && !gachaResult) return null;
 
-  const isSSR = gachaResult?.id?.startsWith("ssr_");
-  const isSR = gachaResult?.id?.startsWith("sr_");
+  // 2. Normalisasi Data Result (Bisa membaca format Object atau String)
+  const resultId =
+    typeof gachaResult === "object" ? gachaResult?.id : gachaResult;
+  const resultName =
+    typeof gachaResult === "object"
+      ? gachaResult?.name || resultId
+      : gachaResult || currentRollItem;
+
+  // 3. Deteksi Rarity berdasarkan Prefix ID
+  const isSSR = resultId?.startsWith("ssr_");
+  const isSR = resultId?.startsWith("sr_");
 
   const glowColor = isSSR
     ? "border-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.6)]"
@@ -25,19 +35,20 @@ const GachaOverlay = ({
       : "text-blue-400";
 
   const btnStyle = isSSR
-    ? "bg-yellow-500 text-black hover:bg-yellow-400"
+    ? "bg-yellow-500 text-black hover:bg-yellow-400 shadow-yellow-500/30"
     : isSR
-      ? "bg-purple-600 text-white hover:bg-purple-500"
-      : "bg-blue-600 text-white hover:bg-blue-500";
+      ? "bg-purple-600 text-white hover:bg-purple-500 shadow-purple-500/30"
+      : "bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/30";
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50">
-      {/* STATE: ROLLING */}
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-all animate-fade-in">
+      {/* STATE 1: ANIMASI ROLLING */}
       {isRolling && (
-        <div className="bg-gray-900 border-2 border-indigo-500 p-8 rounded-2xl max-w-sm w-full text-center mx-4 shadow-[0_0_40px_rgba(99,102,241,0.5)] relative">
-          {/* 🔥 TOMBOL SKIP 🔥 */}
+        <div className="bg-gray-900 border-2 border-indigo-500 p-8 rounded-2xl max-w-sm w-full text-center shadow-[0_0_40px_rgba(99,102,241,0.5)] relative">
+          {/* 🔥 TOMBOL SKIP (Hanya muncul jika prop skipRoll diberikan) 🔥 */}
           {skipRoll && (
             <button
+              type="button"
               onClick={skipRoll}
               className="absolute top-4 right-4 text-xs font-bold text-indigo-400/70 hover:text-indigo-300 transition-colors bg-indigo-500/10 hover:bg-indigo-500/30 px-3 py-1.5 rounded-lg border border-indigo-500/30 hover:border-indigo-500/60 active:scale-95"
             >
@@ -52,7 +63,7 @@ const GachaOverlay = ({
           </div>
 
           <h2 className="text-2xl font-black text-white mt-8 mb-8 tracking-wide min-h-[64px] flex items-center justify-center">
-            {currentRollItem}
+            {currentRollItem || "Spinning..."}
           </h2>
 
           <div className="flex justify-center gap-2">
@@ -67,10 +78,10 @@ const GachaOverlay = ({
         </div>
       )}
 
-      {/* STATE: HASIL */}
+      {/* STATE 2: REVEAL HASIL GACHA */}
       {!isRolling && gachaResult && (
         <div
-          className={`bg-gray-900 border-2 p-8 rounded-2xl max-w-sm w-full text-center mx-4 ${glowColor}`}
+          className={`bg-gray-900 border-2 p-8 rounded-2xl max-w-sm w-full text-center shadow-2xl transition-all duration-300 ${glowColor}`}
         >
           <span
             className={`text-xs font-black tracking-widest uppercase bg-gray-950 px-3 py-1 rounded-full border border-gray-800 ${textColor}`}
@@ -81,21 +92,24 @@ const GachaOverlay = ({
                 ? "✨ SR RANK UNLOCKED"
                 : "🔹 RARE RANK UNLOCKED"}
           </span>
+
           <div className="mt-6 mb-2">
             <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">
               You obtained
             </p>
             <h2 className={`text-2xl font-black tracking-wide ${textColor}`}>
-              {currentRollItem}
+              {resultName}
             </h2>
           </div>
+
           <p className="text-gray-500 text-sm mb-6 mt-3">
             Item otomatis masuk ke inventaris kosmetikmu.
           </p>
+
           <button
             type="button"
             onClick={closeOverlay}
-            className={`w-full py-2.5 font-bold rounded-xl active:scale-95 transition-all text-sm ${btnStyle}`}
+            className={`w-full py-2.5 font-bold rounded-xl active:scale-95 transition-all text-sm shadow-lg ${btnStyle}`}
           >
             Klaim Hadiah ✓
           </button>
