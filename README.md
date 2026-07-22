@@ -59,30 +59,11 @@ Contributors names and contact info
 
 ## Version History
 
-* 0.5.0
-    * Fix Index 
-    * Add Sidebar (Leaderboard, Banner, Shop)
-    * Add Leaderboard (Top Level & Top Streak) & Player Search
-    * Move Banner (Gacha) Section to Sidebar
-    * Add Shop (Dummy)
-* 0.4.0
-    * Various Bug Fixes & Improvements
-    * Add Gacha Skip Button
-    * Add Mobile Responsive Layout
-* 0.3.0
-    * Add Player Level
-    * Add Gacha VFX
-    * Add Gacha SFX
-    * Add Clearing Quest SFX
-* 0.2.0
-    * Add Rarity Filter
-    * Add Item Divider
-* 0.1.0
-    * Initial Release
+For detailed release notes, full patch history, and updates for every version - see the [releases page](https://github.com/arpusauri/habit-daily-quest/releases).
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE.md file for details
+This project is licensed under the MIT License - see the [LICENSE.md](https://github.com/arpusauri/habit-daily-quest/blob/main/LICENSE.md) file for details.
 
 <!-- ## Acknowledgments -->
 
