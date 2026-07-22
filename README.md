@@ -1,7 +1,5 @@
 # Gambit
 
-
-
 Gambit adalah sebuah sistem tracker habit yang menerapkan unsur gamify, gambit menjadikan habit mu menjadi daily quest, yang bisa kamu selesaikan untuk mendapatkan mata uang untuk mendapatkan cosmetic yang langka.
 
 ## Description
@@ -61,18 +59,24 @@ Contributors names and contact info
 
 ## Version History
 
+* 0.5
+    * Fix Index 
+    * Add Sidebar (Leaderboard, Banner, Shop)
+    * Add Leaderboard (Top Level & Top Streak) & Player Search
+    * Move Banner (Gacha) Section to Sidebar
+    * Add Shop (Dummy)
 * 0.4
-    * Various bug fixes & improvements
-    * Add gacha skip button
-    * Add mobile responsive layout
+    * Various Bug Fixes & Improvements
+    * Add Gacha Skip Button
+    * Add Mobile Responsive Layout
 * 0.3
-    * Add player level
-    * Add gacha vfx
-    * Add gacha sfx
-    * Add clearing quest sfx
+    * Add Player Level
+    * Add Gacha VFX
+    * Add Gacha SFX
+    * Add Clearing Quest SFX
 * 0.2
-    * Add rarity filter
-    * Add item divider
+    * Add Rarity Filter
+    * Add Item Divider
 * 0.1
     * Initial Release
 
