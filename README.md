@@ -59,25 +59,25 @@ Contributors names and contact info
 
 ## Version History
 
-* 0.5
+* 0.5.0
     * Fix Index 
     * Add Sidebar (Leaderboard, Banner, Shop)
     * Add Leaderboard (Top Level & Top Streak) & Player Search
     * Move Banner (Gacha) Section to Sidebar
     * Add Shop (Dummy)
-* 0.4
+* 0.4.0
     * Various Bug Fixes & Improvements
     * Add Gacha Skip Button
     * Add Mobile Responsive Layout
-* 0.3
+* 0.3.0
     * Add Player Level
     * Add Gacha VFX
     * Add Gacha SFX
     * Add Clearing Quest SFX
-* 0.2
+* 0.2.0
     * Add Rarity Filter
     * Add Item Divider
-* 0.1
+* 0.1.0
     * Initial Release
 
 ## License
