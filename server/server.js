@@ -252,7 +252,7 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
   }
 });
 
-// [POST] Complete a habit
+// [POST] Complete a habit (Dengan Diminishing Returns)
 app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
   try {
     const habitId = parseInt(req.params.id);
@@ -260,26 +260,47 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
 
     const habitCheck = await pool.query(
       "SELECT * FROM habits WHERE id = $1 AND user_id = $2",
-      [habitId, userId],
+      [habitId, userId]
     );
     if (habitCheck.rows.length === 0)
       return res.status(404).json({ error: "Habit not found" });
     if (habitCheck.rows[0].is_completed)
       return res.status(400).json({ error: "Habit already completed today!" });
 
+    // 1. Cek berapa banyak quest yang SUDAH selesai hari ini untuk menentukan Diminishing Returns
+    const completedTodayResult = await pool.query(
+      "SELECT COUNT(*) FROM habits WHERE user_id = $1 AND is_completed = true",
+      [userId]
+    );
+    const completedToday = parseInt(completedTodayResult.rows[0].count);
+
+    // 2. Hitung EXP & Gems berdasarkan tier Diminishing Returns
+    let earnedExp = 50;
+    let earnedGems = 30;
+
+    if (completedToday >= 10) {
+      earnedExp = 5;   // Tier 10%
+      earnedGems = 3;
+    } else if (completedToday >= 5) {
+      earnedExp = 25;  // Tier 50%
+      earnedGems = 15;
+    }
+
+    // 3. Tandai quest selesai & tambah streak
     await pool.query(
       "UPDATE habits SET is_completed = true, streak = streak + 1 WHERE id = $1",
-      [habitId],
+      [habitId]
     );
 
+    // 4. Update data User (Gems, EXP, Level Up)
     const userCheck = await pool.query(
       "SELECT gems, level, exp FROM users WHERE id = $1",
-      [userId],
+      [userId]
     );
     let { gems, level, exp } = userCheck.rows[0];
 
-    gems += 30;
-    exp += 50;
+    gems += earnedGems;
+    exp += earnedExp;
 
     const EXP_NEEDED = 100;
     while (exp >= EXP_NEEDED) {
@@ -289,7 +310,7 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
 
     await pool.query(
       "UPDATE users SET gems = $1, level = $2, exp = $3 WHERE id = $4",
-      [gems, level, exp, userId],
+      [gems, level, exp, userId]
     );
 
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
@@ -297,11 +318,11 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
     ]);
     const updatedHabits = await pool.query(
       "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
-      [userId],
+      [userId]
     );
     const inventoryResult = await pool.query(
       "SELECT item_id FROM inventory WHERE user_id = $1",
-      [userId],
+      [userId]
     );
 
     const formattedUser = {
@@ -309,10 +330,49 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
       inventory: inventoryResult.rows.map((row) => row.item_id),
     };
 
-    res.json({ user: formattedUser, habits: updatedHabits.rows });
+    // Kirim juga info berapa EXP & Gems yang baru saja didapatkan
+    res.json({
+      user: formattedUser,
+      habits: updatedHabits.rows,
+      rewardInfo: { earnedExp, earnedGems, tier: completedToday >= 10 ? "10%" : completedToday >= 5 ? "50%" : "100%" }
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+// [GET] Leaderboard Top Level
+app.get("/api/leaderboard/level", authenticateUser, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, username, level, exp, equipped_border, equipped_font 
+       FROM users 
+       ORDER BY level DESC, exp DESC 
+       LIMIT 10`
+    );
+    res.json({ leaderboard: result.rows });
+  } catch (err) {
+    console.error("Leaderboard Level Error:", err.message);
+    res.status(500).json({ error: "Gagal mengambil data Leaderboard Level" });
+  }
+});
+
+// [GET] Leaderboard Top Streak (Mengambil Streak tertinggi dari habit pemain)
+app.get("/api/leaderboard/streak", authenticateUser, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.level, COALESCE(MAX(h.streak), 0) AS max_streak, u.equipped_border, u.equipped_font 
+       FROM users u
+       LEFT JOIN habits h ON u.id = h.user_id
+       GROUP BY u.id
+       ORDER BY max_streak DESC, u.level DESC
+       LIMIT 10`
+    );
+    res.json({ leaderboard: result.rows });
+  } catch (err) {
+    console.error("Leaderboard Streak Error:", err.message);
+    res.status(500).json({ error: "Gagal mengambil data Leaderboard Streak" });
   }
 });
 

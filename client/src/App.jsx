@@ -14,6 +14,7 @@ import { playSound } from "./utils/soundEngine";
 // import supabase
 import { supabase } from "./supabaseClient";
 import AuthPage from "./AuthPage";
+import LeaderboardModal from "./components/LeaderboardModal";
 
 // Helper untuk menghentikan kode sementara (jeda waktu)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -66,6 +67,7 @@ function App() {
   const rollTimeoutRef = useRef(null);
   const skipRef = useRef(false);
   const deletedHabitRef = useRef(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // ── AUTH SESSION ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -115,7 +117,20 @@ function App() {
     playSound("complete");
     const oldLevel = userData.level || 1;
 
-    // Optimistic update
+    // 1. Hitung berapa quest yang sudah selesai untuk Diminishing Returns Frontend
+    const completedToday = habits.filter((h) => h.is_completed).length;
+    let earnedExp = 50;
+    let earnedGems = 30;
+
+    if (completedToday >= 10) {
+      earnedExp = 5;
+      earnedGems = 3;
+    } else if (completedToday >= 5) {
+      earnedExp = 25;
+      earnedGems = 15;
+    }
+
+    // Optimistic update status habit
     setHabits((prev) =>
       prev.map((h) =>
         h.id === habitId
@@ -126,12 +141,12 @@ function App() {
 
     const currentExp = userData.exp || 0;
     const currentLevel = userData.level || 1;
-    const newExp = currentExp + 50;
+    const newExp = currentExp + earnedExp; // Gunakan earnedExp yang sudah dihitung
     const levelUp = newExp >= 100;
 
     setUserData((prev) => ({
       ...prev,
-      gems: prev.gems + 30,
+      gems: prev.gems + earnedGems, // Gunakan earnedGems yang sudah dihitung
       exp: levelUp ? newExp - 100 : newExp,
       level: levelUp ? currentLevel + 1 : currentLevel,
     }));
@@ -154,8 +169,11 @@ function App() {
         }
         setUserData(data.user);
         setHabits(data.habits);
-        if (data.user.level > oldLevel)
+
+        // Cek level up dari data server yang akurat
+        if (data.user.level > oldLevel) {
           setTimeout(() => playSound("level_up"), 100);
+        }
       })
       .catch(() => {
         authFetch(`${API_URL}/api/dashboard`)
@@ -399,8 +417,8 @@ function App() {
 
   return (
     <div className={`${appBackground} min-h-screen-mobile p-4`}>
-      <div className="max-w-xl mx-auto">
-        {/* Section User Profile*/}
+      <div className="max-w-xl mx-auto space-y-4">
+        {/* 1. User Profile */}
         <UserProfile
           userData={userData}
           userCardBorder={userCardBorder}
@@ -408,10 +426,18 @@ function App() {
           onLogout={() => supabase.auth.signOut()}
         />
 
-        {/* Section Gacha*/}
+        {/* 2. Tombol Leaderboard */}
+        <button
+          onClick={() => setShowLeaderboard(true)}
+          className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white font-black shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
+        >
+          🏆 GLOBAL LEADERBOARD
+        </button>
+
+        {/* 3. Section Gacha */}
         <GachaSection rollGacha={rollGacha} isRolling={isRolling} />
 
-        {/* Quest Section*/}
+        {/* 4. Section Quest (DITAMBAHKAN KEMBALI) */}
         <QuestSection
           habits={habits}
           newHabitName={newHabitName}
@@ -425,6 +451,7 @@ function App() {
           questTitleStyle={questTitleStyle}
         />
 
+        {/* 5. Section Inventory (DITAMBAHKAN KEMBALI) */}
         <Inventory
           userData={userData}
           selectedRarityFilter={selectedRarityFilter}
@@ -434,25 +461,30 @@ function App() {
         />
       </div>
 
-      {/* Gacha Overlay*/}
+      {/* Overlays (DITAMBAHKAN KEMBALI) */}
       {overlayVisible && (
         <GachaOverlay
           isRolling={isRolling}
           currentRollItem={currentRollItem}
           gachaResult={gachaResult}
-          closeOverlay={() => {
-            setGachaResult(null);
-            setOverlayVisible(false);
-          }}
+          closeOverlay={closeOverlay}
           skipRoll={handleSkipAnimation}
         />
       )}
 
-      {/* Item Index Overlay */}
       {showItemIndex && (
         <ItemIndex
           userData={userData}
           onClose={() => setShowItemIndex(false)}
+        />
+      )}
+
+      {/* Modal Leaderboard */}
+      {showLeaderboard && (
+        <LeaderboardModal
+          onClose={() => setShowLeaderboard(false)}
+          authFetch={authFetch}
+          apiUrl={API_URL}
         />
       )}
     </div>
