@@ -1,129 +1,156 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
 
-export default function LeaderboardModal({ onClose, authFetch, apiUrl }) {
-  const [activeTab, setActiveTab] = useState("level"); // 'level' atau 'streak'
-  const [leaderboardData, setLeaderboardData] = useState([]);
+function LeaderboardModal({ onClose }) {
+  const [tab, setTab] = useState("level"); // 'level' | 'streak'
+  const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLeaderboard(activeTab);
-  }, [activeTab]);
+    fetchLeaderboard();
+  }, [tab]);
 
-  const fetchLeaderboard = (tab) => {
+  const fetchLeaderboard = async () => {
     setLoading(true);
-    authFetch(`${apiUrl}/api/leaderboard/${tab}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setLeaderboardData(data.leaderboard || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching leaderboard:", err);
-        setLoading(false);
-      });
+    try {
+      if (tab === "level") {
+        // Ambil Top 10 Level & EXP dari Supabase
+        const { data, error } = await supabase
+          .from("users")
+          .select("id, username, level, exp, equipped_border, equipped_font")
+          .order("level", { ascending: false })
+          .order("exp", { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+        setLeaderboard(data || []);
+      } else {
+        // Ambil Top 10 Streak (dengan join tabel habits)
+        const { data, error } = await supabase.from("users").select(`
+            id, username, level, equipped_border, equipped_font,
+            habits ( streak )
+          `);
+
+        if (error) throw error;
+
+        // Hitung streak tertinggi (max streak) milik setiap pemain
+        const processed = (data || []).map((user) => {
+          const maxStreak =
+            user.habits && user.habits.length > 0
+              ? Math.max(...user.habits.map((h) => h.streak || 0))
+              : 0;
+          return { ...user, max_streak: maxStreak };
+        });
+
+        // Urutkan dari streak tertinggi
+        processed.sort(
+          (a, b) => b.max_streak - a.max_streak || b.level - a.level,
+        );
+
+        setLeaderboard(processed.slice(0, 10));
+      }
+    } catch (err) {
+      console.error("Error loading leaderboard:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRankBadge = (index) => {
+    if (index === 0) return "🥇";
+    if (index === 1) return "🥈";
+    if (index === 2) return "🥉";
+    return `#${index + 1}`;
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 text-white shadow-2xl relative">
         {/* Header & Close Button */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
-            🏆 HALL OF FAME
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-black text-yellow-400 flex items-center gap-2">
+            🏆 GLOBAL LEADERBOARD
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white font-bold text-lg"
+            className="text-gray-400 hover:text-white text-xl font-bold p-1"
           >
             ✕
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex bg-gray-800 rounded-xl p-1 mb-6">
+        {/* Tab Selector */}
+        <div className="flex bg-slate-800 p-1 rounded-xl mb-4 gap-1">
           <button
-            onClick={() => setActiveTab("level")}
-            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${
-              activeTab === "level"
-                ? "bg-indigo-600 text-white shadow-lg"
+            onClick={() => setTab("level")}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              tab === "level"
+                ? "bg-purple-600 text-white shadow-md"
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            👑 TOP LEVEL
+            ⭐ Top Level
           </button>
           <button
-            onClick={() => setActiveTab("streak")}
-            className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${
-              activeTab === "streak"
-                ? "bg-orange-600 text-white shadow-lg"
+            onClick={() => setTab("streak")}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+              tab === "streak"
+                ? "bg-purple-600 text-white shadow-md"
                 : "text-gray-400 hover:text-white"
             }`}
           >
-            🔥 TOP STREAK
+            🔥 Top Streak
           </button>
         </div>
 
         {/* List Content */}
         {loading ? (
-          <p className="text-center text-gray-500 py-8 text-sm">
-            Memuat Juara...
-          </p>
+          <div className="py-8 text-center text-gray-400 animate-pulse font-semibold">
+            Memuat data leaderboard...
+          </div>
+        ) : leaderboard.length === 0 ? (
+          <div className="py-8 text-center text-gray-400">
+            Belum ada data pemain.
+          </div>
         ) : (
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-            {leaderboardData.map((item, index) => {
-              // Highlight Top 3
-              let rankBadge = `#${index + 1}`;
-              let rankStyle = "text-gray-400";
-              if (index === 0) {
-                rankBadge = "🥇";
-                rankStyle = "text-yellow-400 text-lg";
-              }
-              if (index === 1) {
-                rankBadge = "🥈";
-                rankStyle = "text-slate-300 text-lg";
-              }
-              if (index === 2) {
-                rankBadge = "🥉";
-                rankStyle = "text-amber-600 text-lg";
-              }
-
-              return (
-                <div
-                  key={item.id}
-                  className="bg-gray-800/60 border border-gray-700/50 rounded-xl p-3 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`font-black w-6 text-center ${rankStyle}`}>
-                      {rankBadge}
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-white">
-                        {item.username}
-                      </p>
-                      <p className="text-[10px] text-gray-400">
-                        Level {item.level}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Right Score Info */}
-                  <div className="text-right">
-                    {activeTab === "level" ? (
-                      <span className="text-xs font-black text-indigo-400">
-                        Lv. {item.level} ({item.exp} EXP)
-                      </span>
-                    ) : (
-                      <span className="text-xs font-black text-orange-400 flex items-center gap-1">
-                        🔥 {item.max_streak} Days
-                      </span>
-                    )}
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {leaderboard.map((player, index) => (
+              <div
+                key={player.id || index}
+                className="flex items-center justify-between p-3 bg-slate-800/80 border border-slate-700/60 rounded-xl"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold w-8 text-center">
+                    {getRankBadge(index)}
+                  </span>
+                  <div>
+                    <p className="font-bold text-sm text-slate-100">
+                      {player.username}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Lv. {player.level || 1}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="text-right">
+                  {tab === "level" ? (
+                    <span className="text-sm font-black text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-lg border border-amber-400/20">
+                      EXP: {player.exp || 0}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-black text-orange-400 bg-orange-400/10 px-2.5 py-1 rounded-lg border border-orange-400/20">
+                      🔥 {player.max_streak || 0} Hari
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
     </div>
   );
 }
+
+export default LeaderboardModal;

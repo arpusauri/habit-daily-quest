@@ -481,11 +481,7 @@ function App() {
 
       {/* Modal Leaderboard */}
       {showLeaderboard && (
-        <LeaderboardModal
-          onClose={() => setShowLeaderboard(false)}
-          authFetch={authFetch}
-          apiUrl={API_URL}
-        />
+        <LeaderboardModal onClose={() => setShowLeaderboard(false)} />
       )}
     </div>
   );
