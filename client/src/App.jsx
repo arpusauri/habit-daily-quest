@@ -121,9 +121,15 @@ function App() {
   };
 
   const completeHabit = (habitId) => {
+    // 🛡️ GUARD: Cegah execute jika quest baru saja dibuat & masih proses simpan (ID masih temp_)
+    if (typeof habitId === "string" && habitId.startsWith("temp_")) {
+      alert("Sabar ya, quest ini sedang disimpan ke server...");
+      return;
+    }
+
     playSound("complete");
 
-    // 🔥 PENTING: Tambahkan ini agar HabitHeatmap langsung ter-update secara real-time!
+    // 🔥 PENTING: Refresh HabitHeatmap secara real-time
     setActivityTrigger((prev) => prev + 1);
 
     const oldLevel = userData.level || 1;
@@ -474,8 +480,9 @@ function App() {
 
         {/* 🔥 Habit Heatmap Section 🔥 */}
         <HabitHeatmap
+          apiUrl={API_URL}
           equippedTheme={userData?.equipped_theme}
-          refreshTrigger={activityTrigger} 
+          refreshTrigger={activityTrigger}
           unlockedCosmeticsCount={userData?.inventory?.length || 0}
         />
 

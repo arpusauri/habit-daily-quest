@@ -3,9 +3,10 @@ import { ActivityCalendar } from "react-activity-calendar";
 import { supabase } from "../supabaseClient";
 
 const HabitHeatmap = ({
+  apiUrl = "",
   equippedTheme,
   refreshTrigger,
-  unlockedCosmeticsCount = 0, // 👈 Tambahkan prop ini (default 0)
+  unlockedCosmeticsCount,
 }) => {
   const [activeTab, setActiveTab] = useState("week"); // 'week' | 'month' | 'all'
   const [rawApiData, setRawApiData] = useState([]);
@@ -25,7 +26,8 @@ const HabitHeatmap = ({
           return;
         }
 
-        const response = await fetch("/api/activity-history", {
+        // 🔥 UBAH BARIS INI: Tambahkan ${apiUrl} di depan URL endpoint
+        const response = await fetch(`${apiUrl}/api/activity-history`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -44,7 +46,7 @@ const HabitHeatmap = ({
     };
 
     fetchActivity();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, apiUrl]);
 
   // Map Data API untuk O(1) Quick Lookup
   const dataMap = useMemo(() => {
@@ -71,7 +73,11 @@ const HabitHeatmap = ({
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const dateStr = d.toISOString().split("T")[0];
-      const item = dataMap.get(dateStr) || { date: dateStr, count: 0, level: 0 };
+      const item = dataMap.get(dateStr) || {
+        date: dateStr,
+        count: 0,
+        level: 0,
+      };
       const isToday = dateStr === today.toISOString().split("T")[0];
 
       list.push({
@@ -106,7 +112,11 @@ const HabitHeatmap = ({
     for (let d = 1; d <= lastDay.getDate(); d++) {
       const dateObj = new Date(year, month, d);
       const dateStr = dateObj.toISOString().split("T")[0];
-      const item = dataMap.get(dateStr) || { date: dateStr, count: 0, level: 0 };
+      const item = dataMap.get(dateStr) || {
+        date: dateStr,
+        count: 0,
+        level: 0,
+      };
       const isToday = dateStr === today.toISOString().split("T")[0];
 
       cells.push({
@@ -136,7 +146,11 @@ const HabitHeatmap = ({
       const d = new Date();
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
-      const item = dataMap.get(dateStr) || { date: dateStr, count: 0, level: 0 };
+      const item = dataMap.get(dateStr) || {
+        date: dateStr,
+        count: 0,
+        level: 0,
+      };
       list.push(item);
     }
     return list;
@@ -162,7 +176,7 @@ const HabitHeatmap = ({
     } else if (activeTab === "month") {
       return monthCalendarData.cells.reduce(
         (acc, curr) => acc + (curr.count || 0),
-        0
+        0,
       );
     } else {
       return yearData.reduce((acc, curr) => acc + (curr.count || 0), 0);
@@ -227,8 +241,8 @@ const HabitHeatmap = ({
             {activeTab === "week"
               ? "this week"
               : activeTab === "month"
-              ? "this month"
-              : "total"}
+                ? "this month"
+                : "total"}
           </span>
         </div>
 
