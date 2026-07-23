@@ -23,25 +23,30 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Izinkan request tanpa origin (seperti Postman, Curl, atau server-to-server)
     if (!origin) return callback(null, true);
-    
+
     // Cek apakah origin ada di daftar allowedOrigins
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".arpusauri.my.id")) {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      origin.endsWith(".arpusauri.my.id")
+    ) {
       callback(null, true);
     } else {
       callback(new Error("CORS Policy: Origin ini tidak diizinkan."));
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"], // 👈 Wajib untuk token Supabase!
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+  ], // 👈 Wajib untuk token Supabase!
   credentials: true,
-  optionsSuccessStatus: 200 // Mencegah issue di beberapa proxy/browser lama yang choke di 204
+  optionsSuccessStatus: 200, // Mencegah issue di beberapa proxy/browser lama yang choke di 204
 };
 
 // Pasang middleware CORS
 app.use(cors(corsOptions));
-
-// Handle PREFLIGHT request (OPTIONS) secara eksplisit untuk semua route
-app.options("*", cors(corsOptions));
 
 app.use(express.json());
 
@@ -57,11 +62,15 @@ const pool = new Pool({
 
 // Ambil token dengan fallback (jika pakai awalan VITE_ tetap terbaca)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 // Validasi manual sebelum crash agar ketahuan jika kosong
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("❌ ERROR: Supabase URL atau Anon Key tidak ditemukan di file .env!");
+  console.error(
+    "❌ ERROR: Supabase URL atau Anon Key tidak ditemukan di file .env!",
+  );
   process.exit(1);
 }
 
@@ -280,7 +289,7 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
 
     const habitCheck = await pool.query(
       "SELECT * FROM habits WHERE id = $1 AND user_id = $2",
-      [habitId, userId]
+      [habitId, userId],
     );
     if (habitCheck.rows.length === 0)
       return res.status(404).json({ error: "Habit not found" });
@@ -290,7 +299,7 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
     // 1. Cek berapa banyak quest yang SUDAH selesai hari ini untuk menentukan Diminishing Returns
     const completedTodayResult = await pool.query(
       "SELECT COUNT(*) FROM habits WHERE user_id = $1 AND is_completed = true",
-      [userId]
+      [userId],
     );
     const completedToday = parseInt(completedTodayResult.rows[0].count);
 
@@ -299,17 +308,17 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
     let earnedGems = 30;
 
     if (completedToday >= 10) {
-      earnedExp = 5;   // Tier 10%
+      earnedExp = 5; // Tier 10%
       earnedGems = 3;
     } else if (completedToday >= 5) {
-      earnedExp = 25;  // Tier 50%
+      earnedExp = 25; // Tier 50%
       earnedGems = 15;
     }
 
     // 3. Tandai quest selesai & tambah streak
     await pool.query(
       "UPDATE habits SET is_completed = true, streak = streak + 1 WHERE id = $1",
-      [habitId]
+      [habitId],
     );
 
     // 🔥 3.5 UPSERT DATA KE DAILY_ACTIVITY (UNTUK HEATMAP) 🔥
@@ -318,13 +327,13 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
        VALUES ($1, CURRENT_DATE, 1)
        ON CONFLICT (user_id, activity_date)
        DO UPDATE SET completed_count = daily_activity.completed_count + 1`,
-      [userId]
+      [userId],
     );
 
     // 4. Update data User (Gems, EXP, Level Up)
     const userCheck = await pool.query(
       "SELECT gems, level, exp FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
     let { gems, level, exp } = userCheck.rows[0];
 
@@ -339,7 +348,7 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
 
     await pool.query(
       "UPDATE users SET gems = $1, level = $2, exp = $3 WHERE id = $4",
-      [gems, level, exp, userId]
+      [gems, level, exp, userId],
     );
 
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
@@ -347,11 +356,11 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
     ]);
     const updatedHabits = await pool.query(
       "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
-      [userId]
+      [userId],
     );
     const inventoryResult = await pool.query(
       "SELECT item_id FROM inventory WHERE user_id = $1",
-      [userId]
+      [userId],
     );
 
     const formattedUser = {
@@ -366,7 +375,8 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
       rewardInfo: {
         earnedExp,
         earnedGems,
-        tier: completedToday >= 10 ? "10%" : completedToday >= 5 ? "50%" : "100%",
+        tier:
+          completedToday >= 10 ? "10%" : completedToday >= 5 ? "50%" : "100%",
       },
     });
   } catch (err) {
@@ -385,7 +395,7 @@ app.get("/api/activity-history", authenticateUser, async (req, res) => {
        FROM daily_activity
        WHERE user_id = $1
        ORDER BY activity_date ASC`,
-      [userId]
+      [userId],
     );
 
     // Format output sesuai kebutuhan react-activity-calendar
@@ -418,7 +428,7 @@ app.get("/api/leaderboard/level", authenticateUser, async (req, res) => {
       `SELECT id, username, level, exp, equipped_border, equipped_font 
        FROM users 
        ORDER BY level DESC, exp DESC 
-       LIMIT 10`
+       LIMIT 10`,
     );
     res.json({ leaderboard: result.rows });
   } catch (err) {
@@ -436,7 +446,7 @@ app.get("/api/leaderboard/streak", authenticateUser, async (req, res) => {
        LEFT JOIN habits h ON u.id = h.user_id
        GROUP BY u.id
        ORDER BY max_streak DESC, u.level DESC
-       LIMIT 10`
+       LIMIT 10`,
     );
     res.json({ leaderboard: result.rows });
   } catch (err) {
