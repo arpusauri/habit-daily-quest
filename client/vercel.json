@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://habit-daily-api.bonto.run/api/:path*"
+    }
+  ]
+}

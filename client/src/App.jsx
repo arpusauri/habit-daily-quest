@@ -25,9 +25,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 1. ADD YOUR LIVE URL HERE (No slash at the end)
 const API_URL =
-  window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : "https://habit-daily-api.bonto.run";
+  window.location.hostname === "localhost" ? "http://localhost:5000" : "";
 
 const ITEM_NAME_MAP = {
   r_blue: "Cyan Border",
