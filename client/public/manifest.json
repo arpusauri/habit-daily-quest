@@ -1,10 +1,20 @@
 {
-  "short_name": "Q-Gacha",
-  "name": "Quantum Gacha System",
+  "short_name": "Habit Quest",
+  "name": "Habit Daily Quest",
   "icons": [
     {
-      "src": "favicon.svg",
-      "type": "image/svg+xml",
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     }

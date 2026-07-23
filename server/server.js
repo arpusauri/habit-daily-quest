@@ -41,7 +41,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle PREFLIGHT request (OPTIONS) secara eksplisit untuk semua route
-app.options("*", cors(corsOptions));
+app.options(/(.*)/, cors(corsOptions));
 
 app.use(express.json());
 
@@ -272,7 +272,7 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
   }
 });
 
-// [POST] Complete a habit (Dengan Diminishing Returns)
+// [POST] Complete a habit (Dengan Diminishing Returns & Heatmap Tracker)
 app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
   try {
     const habitId = parseInt(req.params.id);
@@ -310,6 +310,15 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
     await pool.query(
       "UPDATE habits SET is_completed = true, streak = streak + 1 WHERE id = $1",
       [habitId]
+    );
+
+    // 🔥 3.5 UPSERT DATA KE DAILY_ACTIVITY (UNTUK HEATMAP) 🔥
+    await pool.query(
+      `INSERT INTO daily_activity (user_id, activity_date, completed_count)
+       VALUES ($1, CURRENT_DATE, 1)
+       ON CONFLICT (user_id, activity_date)
+       DO UPDATE SET completed_count = daily_activity.completed_count + 1`,
+      [userId]
     );
 
     // 4. Update data User (Gems, EXP, Level Up)
@@ -354,8 +363,48 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
     res.json({
       user: formattedUser,
       habits: updatedHabits.rows,
-      rewardInfo: { earnedExp, earnedGems, tier: completedToday >= 10 ? "10%" : completedToday >= 5 ? "50%" : "100%" }
+      rewardInfo: {
+        earnedExp,
+        earnedGems,
+        tier: completedToday >= 10 ? "10%" : completedToday >= 5 ? "50%" : "100%",
+      },
     });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// [GET] Ambil Histori Aktivitas untuk Heatmap
+app.get("/api/activity-history", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const result = await pool.query(
+      `SELECT TO_CHAR(activity_date, 'YYYY-MM-DD') AS date, completed_count
+       FROM daily_activity
+       WHERE user_id = $1
+       ORDER BY activity_date ASC`,
+      [userId]
+    );
+
+    // Format output sesuai kebutuhan react-activity-calendar
+    const formattedData = result.rows.map((row) => {
+      const count = parseInt(row.completed_count);
+      let level = 0;
+      if (count >= 10) level = 4;
+      else if (count >= 5) level = 3;
+      else if (count >= 3) level = 2;
+      else if (count >= 1) level = 1;
+
+      return {
+        date: row.date,
+        count: count,
+        level: level,
+      };
+    });
+
+    res.json(formattedData);
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Server error" });

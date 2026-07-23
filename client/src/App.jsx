@@ -12,6 +12,7 @@ import Sidebar from "./components/Sidebar";
 import ShopOverlay from "./components/ShopOverlay";
 import BannerOverlay from "./components/BannerOverlay";
 import LeaderboardOverlay from "./components/LeaderboardOverlay";
+import HabitHeatmap from "./components/HabitHeatmap";
 //import overlays
 import GachaOverlay from "./components/GachaOverlay";
 // import utils
@@ -65,6 +66,7 @@ function App() {
   const [showItemIndex, setShowItemIndex] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [activityTrigger, setActivityTrigger] = useState(0);
 
   const rollIntervalRef = useRef(null);
   const rollTimeoutRef = useRef(null);
@@ -120,6 +122,10 @@ function App() {
 
   const completeHabit = (habitId) => {
     playSound("complete");
+
+    // 🔥 PENTING: Tambahkan ini agar HabitHeatmap langsung ter-update secara real-time!
+    setActivityTrigger((prev) => prev + 1);
+
     const oldLevel = userData.level || 1;
 
     // 1. Hitung berapa quest yang sudah selesai untuk Diminishing Returns Frontend
@@ -146,12 +152,12 @@ function App() {
 
     const currentExp = userData.exp || 0;
     const currentLevel = userData.level || 1;
-    const newExp = currentExp + earnedExp; // Gunakan earnedExp yang sudah dihitung
+    const newExp = currentExp + earnedExp;
     const levelUp = newExp >= 100;
 
     setUserData((prev) => ({
       ...prev,
-      gems: prev.gems + earnedGems, // Gunakan earnedGems yang sudah dihitung
+      gems: prev.gems + earnedGems,
       exp: levelUp ? newExp - 100 : newExp,
       level: levelUp ? currentLevel + 1 : currentLevel,
     }));
@@ -175,7 +181,6 @@ function App() {
         setUserData(data.user);
         setHabits(data.habits);
 
-        // Cek level up dari data server yang akurat
         if (data.user.level > oldLevel) {
           setTimeout(() => playSound("level_up"), 100);
         }
@@ -363,6 +368,10 @@ function App() {
       .catch((err) => console.error("Error equipping:", err));
   };
 
+  const handleQuestSuccess = () => {
+    setActivityTrigger((prev) => prev + 1);
+  };
+
   // Dynamic theme layouts
   const isDarkMode = userData.equipped_theme === "sr_dark";
   const isMatrixMode = userData.equipped_theme === "ssr_matrix";
@@ -461,6 +470,13 @@ function App() {
           isDarkMode={isDarkMode}
           questCardStyle={questCardStyle}
           questTitleStyle={questTitleStyle}
+        />
+
+        {/* 🔥 Habit Heatmap Section 🔥 */}
+        <HabitHeatmap
+          equippedTheme={userData?.equipped_theme}
+          refreshTrigger={activityTrigger} 
+          unlockedCosmeticsCount={userData?.inventory?.length || 0}
         />
 
         {/* Inventory Section */}
