@@ -10,20 +10,39 @@ const PORT = process.env.PORT || 5000;
 // ==========================================
 // 1. MIDDLEWARE CONFIGURATION
 // ==========================================
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "https://gambit.arpusauri.my.id",
+  "https://habit-daily-quest.vercel.app",
+  "https://habit-daily-api.bonto.run",
+];
+
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "https://gambit.arpusauri.my.id",
-    "https://habit-daily-quest.vercel.app",
-    "https://habit-daily-api.bonto.run",
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: function (origin, callback) {
+    // Izinkan request tanpa origin (seperti Postman, Curl, atau server-to-server)
+    if (!origin) return callback(null, true);
+    
+    // Cek apakah origin ada di daftar allowedOrigins
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".arpusauri.my.id")) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS Policy: Origin ini tidak diizinkan."));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"], // 👈 Wajib untuk token Supabase!
   credentials: true,
+  optionsSuccessStatus: 200 // Mencegah issue di beberapa proxy/browser lama yang choke di 204
 };
 
+// Pasang middleware CORS
 app.use(cors(corsOptions));
+
+// Handle PREFLIGHT request (OPTIONS) secara eksplisit untuk semua route
+app.options("*", cors(corsOptions));
+
 app.use(express.json());
 
 // ==========================================
