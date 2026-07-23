@@ -449,7 +449,9 @@ function App() {
   };
 
   return (
-    <div className={`${appBackground} min-h-screen-mobile p-4 relative`}>
+    <div
+      className={`${appBackground} min-h-screen-mobile p-4 relative overflow-x-hidden`}
+    >
       {/* 1. Sidebar Navigasi */}
       <Sidebar
         onOpenLeaderboard={() => setShowLeaderboard(true)}

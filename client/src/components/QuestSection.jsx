@@ -47,7 +47,7 @@ const QuestSection = ({
           placeholder={
             isMatrixMode ? "ENTER_NEW_MISSION..." : "Add a new daily quest..."
           }
-          className={`flex-1 px-4 py-2 rounded-lg text-sm border focus:outline-none transition-all ${
+          className={`flex-1 min-w-0 px-4 py-2 rounded-lg text-sm border focus:outline-none transition-all ${
             isMatrixMode
               ? "bg-black border-green-600/50 text-green-400 placeholder-green-700 focus:border-green-400 font-mono"
               : isDarkMode
