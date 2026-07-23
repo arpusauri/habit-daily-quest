@@ -41,7 +41,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle PREFLIGHT request (OPTIONS) secara eksplisit untuk semua route
-app.options(/(.*)/, cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 
