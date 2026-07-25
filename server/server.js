@@ -133,6 +133,7 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // Gacha Pool Data (Cosmetics)
+// Gacha Pool Data (Cosmetics)
 const COSMETIC_POOL = [
   { id: "r_blue", name: "🔵 Cyan Border", rarity: "R", chance: 0.7 },
   { id: "r_pink", name: "🌸 Pink Text Font", rarity: "R", chance: 0.7 },
@@ -147,7 +148,30 @@ const COSMETIC_POOL = [
     id: "ssr_matrix",
     name: "👾 Animated Cyberpunk Matrix BG",
     rarity: "SSR",
-    chance: 0.05,
+    limited: true,
+  },
+  {
+    id: "ssr_starforge",
+    name: "✨ Starforge Celestial Theme",
+    rarity: "SSR",
+  },
+  {
+    id: "ssr_notepad",
+    name: "📝 Notepad Theme",
+    rarity: "SSR",
+  },
+  // 🔥 SHOP-EXCLUSIVE (gak bisa didapet dari gacha)
+  {
+    id: "shop_aurora",
+    name: "🌌 Aurora Dream Theme",
+    rarity: "SR",
+    shopOnly: true,
+  },
+  {
+    id: "shop_crown",
+    name: "💎 Diamond Crown Tag",
+    rarity: "SSR",
+    shopOnly: true,
   },
 ];
 
@@ -240,6 +264,30 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
       console.log(
         `[RESET] New day detected! Resetting quests for user ${userId}.`,
       );
+
+      // 🔥 Cek habit yang KEMARIN gak sempet diselesaikan (bakal ke-reset streaknya)
+      const missedHabits = await pool.query(
+        "SELECT id FROM habits WHERE user_id = $1 AND is_completed = false AND streak > 0",
+        [userId],
+      );
+
+      if (missedHabits.rows.length > 0) {
+        if (user.streak_shield > 0) {
+          // Ada shield! Konsumsi 1, streak semua habit yang kelewat tetep aman
+          await pool.query(
+            "UPDATE users SET streak_shield = streak_shield - 1 WHERE id = $1",
+            [userId],
+          );
+          console.log(`[SHIELD] Streak shield digunakan untuk user ${userId}.`);
+        } else {
+          // Gak ada shield, reset streak habit yang kelewat ke 0
+          await pool.query(
+            "UPDATE habits SET streak = 0 WHERE user_id = $1 AND is_completed = false",
+            [userId],
+          );
+        }
+      }
+
       await pool.query(
         "UPDATE habits SET is_completed = false WHERE user_id = $1",
         [userId],
@@ -263,14 +311,7 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
 
     res.json({
       user: {
-        id: user.id,
-        username: user.username,
-        gems: user.gems,
-        level: user.level,
-        exp: user.exp,
-        equipped_border: user.equipped_border,
-        equipped_font: user.equipped_font,
-        equipped_theme: user.equipped_theme,
+        ...user,
         inventory: inventory,
       },
       habits: habitsResult.rows,
@@ -501,6 +542,10 @@ app.post("/api/gacha/equip", authenticateUser, async (req, res) => {
     else if (itemId.startsWith("sr_dark")) columnToUpdate = "equipped_theme";
     else if (itemId.startsWith("sr_gold")) columnToUpdate = "equipped_font";
     else if (itemId.startsWith("ssr_matrix")) columnToUpdate = "equipped_theme";
+    else if (itemId === "ssr_starforge") columnToUpdate = "equipped_theme";
+    else if (itemId === "shop_aurora") columnToUpdate = "equipped_theme";
+    else if (itemId === "shop_crown") columnToUpdate = "equipped_font";
+    else if (itemId === "ssr_notepad") columnToUpdate = "equipped_theme";
 
     if (columnToUpdate) {
       await pool.query(
@@ -534,6 +579,50 @@ app.post("/api/gacha/equip", authenticateUser, async (req, res) => {
   }
 });
 
+// [POST] Unequip a cosmetic item (balik ke default)
+app.post("/api/gacha/unequip", authenticateUser, async (req, res) => {
+  try {
+    const { itemId } = req.body;
+    const userId = req.userId;
+
+    let columnToUpdate = "";
+    if (itemId.startsWith("r_blue")) columnToUpdate = "equipped_border";
+    else if (itemId.startsWith("r_pink")) columnToUpdate = "equipped_font";
+    else if (itemId.startsWith("sr_dark")) columnToUpdate = "equipped_theme";
+    else if (itemId.startsWith("sr_gold")) columnToUpdate = "equipped_font";
+    else if (itemId.startsWith("ssr_matrix")) columnToUpdate = "equipped_theme";
+    else if (itemId === "ssr_starforge") columnToUpdate = "equipped_theme";
+    else if (itemId === "shop_aurora") columnToUpdate = "equipped_theme";
+    else if (itemId === "shop_crown") columnToUpdate = "equipped_font";
+    else if (itemId === "ssr_notepad") columnToUpdate = "equipped_theme";
+
+    if (columnToUpdate) {
+      await pool.query(
+        `UPDATE users SET ${columnToUpdate} = NULL WHERE id = $1`,
+        [userId],
+      );
+    }
+
+    const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
+      userId,
+    ]);
+    const inventoryResult = await pool.query(
+      "SELECT item_id FROM inventory WHERE user_id = $1",
+      [userId],
+    );
+
+    const formattedUser = {
+      ...updatedUser.rows[0],
+      inventory: inventoryResult.rows.map((row) => row.item_id),
+    };
+
+    res.json({ user: formattedUser });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error unequipping item" });
+  }
+});
+
 // [DELETE] Delete a habit
 app.delete("/api/habits/:id", authenticateUser, async (req, res) => {
   try {
@@ -557,9 +646,123 @@ app.delete("/api/habits/:id", authenticateUser, async (req, res) => {
 });
 
 // [POST] Gacha Pull Route
+// 🔥 Helper: logic inti gacha pull (dipakai gacha/pull DAN shop/buy-ticket)
+const HARD_PITY = 20;
+
+async function performGachaPull(userId, bannerType = "standard") {
+  const pityCol = bannerType === "limited" ? "limited_pity" : "standard_pity";
+
+  const userRow = await pool.query(
+    `SELECT ${pityCol}, limited_guaranteed FROM users WHERE id = $1`,
+    [userId],
+  );
+  let pity = userRow.rows[0][pityCol];
+  let guaranteed = userRow.rows[0].limited_guaranteed;
+
+  pity += 1;
+  const isTopTier = pity >= HARD_PITY || Math.random() < 0.05;
+
+  let pulledItem;
+  let bannerResult = null; // 'limited_win' | 'limited_lose' | null
+  let isPityReward = false;
+
+  if (isTopTier) {
+    pity = 0; // reset pity setiap kali SSR-tier kena
+
+    if (bannerType === "limited") {
+      const winLimited = guaranteed || Math.random() < 0.5;
+
+      if (winLimited) {
+        pulledItem = COSMETIC_POOL.find((i) => i.id === "ssr_matrix");
+        guaranteed = false;
+        bannerResult = "limited_win";
+      } else {
+        const ssrPool = COSMETIC_POOL.filter(
+          (i) => i.rarity === "SSR" && !i.shopOnly && !i.limited,
+        );
+        pulledItem = ssrPool[Math.floor(Math.random() * ssrPool.length)];
+        guaranteed = true;
+        bannerResult = "limited_lose";
+        isPityReward = true;
+      }
+    } else {
+      // Standard banner: SSR asli (bukan lagi placeholder SR)
+      const ssrPool = COSMETIC_POOL.filter(
+        (i) => i.rarity === "SSR" && !i.shopOnly && !i.limited,
+      );
+      pulledItem = ssrPool[Math.floor(Math.random() * ssrPool.length)];
+      isPityReward = true;
+      // 🔧 FIX: bannerResult & guaranteed TIDAK diubah di sini,
+      // karena "guaranteed" itu konsep khusus Limited banner
+    }
+  } else {
+    // Roll normal antara R dan SR (dinormalisasi tanpa slot SSR-tier)
+    const subRoll = Math.random();
+    const rarity = subRoll < 0.7 / 0.95 ? "R" : "SR";
+    const pool_ = COSMETIC_POOL.filter(
+      (i) => i.rarity === rarity && !i.shopOnly && !i.limited,
+    );
+    pulledItem = pool_[Math.floor(Math.random() * pool_.length)];
+  }
+
+  await pool.query(
+    `UPDATE users SET ${pityCol} = $1, limited_guaranteed = $2 WHERE id = $3`,
+    [pity, guaranteed, userId],
+  );
+
+  const invCheck = await pool.query(
+    "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
+    [userId, pulledItem.id],
+  );
+
+  let isDuplicate = false;
+  let shardsEarned = 0;
+
+  if (invCheck.rows.length === 0) {
+    await pool.query(
+      "INSERT INTO inventory (user_id, item_id) VALUES ($1, $2)",
+      [userId, pulledItem.id],
+    );
+  } else {
+    isDuplicate = true;
+    const SHARD_RATES = { R: 5, SR: 15, SSR: 50 };
+    shardsEarned = SHARD_RATES[pulledItem.rarity];
+
+    await pool.query("UPDATE users SET shards = shards + $1 WHERE id = $2", [
+      shardsEarned,
+      userId,
+    ]);
+  }
+
+  const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
+    userId,
+  ]);
+  const inventoryResult = await pool.query(
+    "SELECT item_id FROM inventory WHERE user_id = $1",
+    [userId],
+  );
+
+  const formattedUser = {
+    ...updatedUser.rows[0],
+    inventory: inventoryResult.rows.map((row) => row.item_id),
+  };
+
+  return {
+    user: formattedUser,
+    pulledItem,
+    isDuplicate,
+    shardsEarned,
+    isTopTierPull: isTopTier,
+    isPityReward,
+    bannerResult,
+  };
+}
+
 app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
   try {
     const userId = req.userId;
+    const bannerType =
+      req.body?.bannerType === "limited" ? "limited" : "standard";
 
     const userCheck = await pool.query("SELECT gems FROM users WHERE id = $1", [
       userId,
@@ -574,34 +777,102 @@ app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
       userId,
     ]);
 
-    const roll = Math.random();
-    let selectedRarity = "R";
-    if (roll < 0.05) selectedRarity = "SSR";
-    else if (roll < 0.3) selectedRarity = "SR";
+    const result = await performGachaPull(userId, bannerType);
+    res.json(result);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
-    const availableItems = COSMETIC_POOL.filter(
-      (item) => item.rarity === selectedRarity,
-    );
-    const pulledItem =
-      availableItems[Math.floor(Math.random() * availableItems.length)];
+// [GET] Ambil daftar item Shop (kosmetik yang BELUM dimiliki user)
+app.get("/api/shop/items", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
 
-    const invCheck = await pool.query(
-      "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
-      [userId, pulledItem.id],
+    const invResult = await pool.query(
+      "SELECT item_id FROM inventory WHERE user_id = $1",
+      [userId]
     );
-    if (invCheck.rows.length === 0) {
-      await pool.query(
-        "INSERT INTO inventory (user_id, item_id) VALUES ($1, $2)",
-        [userId, pulledItem.id],
-      );
+    const ownedIds = invResult.rows.map((row) => row.item_id);
+
+    const SHARD_PRICE = { R: 100, SR: 300, SSR: 800 };
+    const SHOP_EXCLUSIVE_PRICE = { R: 150, SR: 450, SSR: 1200 };
+
+    const shopItems = COSMETIC_POOL.filter(
+      (item) => !ownedIds.includes(item.id) && !item.limited,
+    ).map((item) => ({
+      ...item,
+      price: item.shopOnly
+        ? SHOP_EXCLUSIVE_PRICE[item.rarity]
+        : SHARD_PRICE[item.rarity],
+    }));
+
+    const userResult = await pool.query(
+      "SELECT shards FROM users WHERE id = $1",
+      [userId]
+    );
+
+    res.json({
+      shards: userResult.rows[0].shards,
+      items: shopItems,
+      ticketPrice: TICKET_PRICE,
+      shieldPrice: SHIELD_PRICE,
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// [POST] Redeem/beli item spesifik pakai Shards
+app.post("/api/shop/redeem", authenticateUser, async (req, res) => {
+  try {
+    const { itemId } = req.body;
+    const userId = req.userId;
+
+    const item = COSMETIC_POOL.find((i) => i.id === itemId);
+    if (!item || item.limited) {
+      return res.status(400).json({ error: "Item tidak tersedia di Shop." });
     }
+
+    const checkOwn = await pool.query(
+      "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
+      [userId, itemId]
+    );
+    if (checkOwn.rows.length > 0) {
+      return res.status(400).json({ error: "Kamu sudah punya item ini!" });
+    }
+
+   const SHARD_PRICE = { R: 100, SR: 300, SSR: 800 };
+   const SHOP_EXCLUSIVE_PRICE = { R: 150, SR: 450, SSR: 1200 };
+   const price = item.shopOnly
+     ? SHOP_EXCLUSIVE_PRICE[item.rarity]
+     : SHARD_PRICE[item.rarity];
+
+    const userCheck = await pool.query(
+      "SELECT shards FROM users WHERE id = $1",
+      [userId]
+    );
+    if (userCheck.rows[0].shards < price) {
+      return res.status(400).json({ error: "Shards tidak cukup!" });
+    }
+
+    await pool.query("UPDATE users SET shards = shards - $1 WHERE id = $2", [
+      price,
+      userId,
+    ]);
+    await pool.query(
+      "INSERT INTO inventory (user_id, item_id) VALUES ($1, $2)",
+      [userId, itemId]
+    );
 
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
     ]);
     const inventoryResult = await pool.query(
       "SELECT item_id FROM inventory WHERE user_id = $1",
-      [userId],
+      [userId]
     );
 
     const formattedUser = {
@@ -609,7 +880,75 @@ app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
       inventory: inventoryResult.rows.map((row) => row.item_id),
     };
 
-    res.json({ user: formattedUser, pulledItem: pulledItem });
+    res.json({ user: formattedUser, redeemedItem: item });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// [POST] Beli & langsung pakai Gacha Ticket (pakai Shards, bukan Gems)
+const TICKET_PRICE = 60;
+
+app.post("/api/shop/buy-ticket", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const userCheck = await pool.query(
+      "SELECT shards FROM users WHERE id = $1",
+      [userId]
+    );
+    if (userCheck.rows[0].shards < TICKET_PRICE) {
+      return res.status(400).json({ error: "Shards tidak cukup!" });
+    }
+
+    await pool.query("UPDATE users SET shards = shards - $1 WHERE id = $2", [
+      TICKET_PRICE,
+      userId,
+    ]);
+
+    const result = await performGachaPull(userId);
+    res.json(result);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// [POST] Beli Streak Shield pakai Shards
+const SHIELD_PRICE = 120;
+
+app.post("/api/shop/buy-shield", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const userCheck = await pool.query(
+      "SELECT shards FROM users WHERE id = $1",
+      [userId]
+    );
+    if (userCheck.rows[0].shards < SHIELD_PRICE) {
+      return res.status(400).json({ error: "Shards tidak cukup!" });
+    }
+
+    await pool.query(
+      "UPDATE users SET shards = shards - $1, streak_shield = streak_shield + 1 WHERE id = $2",
+      [SHIELD_PRICE, userId]
+    );
+
+    const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
+      userId,
+    ]);
+    const inventoryResult = await pool.query(
+      "SELECT item_id FROM inventory WHERE user_id = $1",
+      [userId]
+    );
+
+    const formattedUser = {
+      ...updatedUser.rows[0],
+      inventory: inventoryResult.rows.map((row) => row.item_id),
+    };
+
+    res.json({ user: formattedUser });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Server error" });
