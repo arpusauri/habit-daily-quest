@@ -1,9 +1,6 @@
-// import library
 import React, { useState, useEffect, useRef } from "react";
 
-// import components
 import UserProfile from "./components/UserProfileSection";
-import GachaSection from "./components/GachaSection";
 import QuestSection from "./components/QuestSection";
 import Inventory from "./components/InventorySection";
 import ItemIndex from "./components/ItemIndex";
@@ -13,18 +10,13 @@ import ShopOverlay from "./components/ShopOverlay";
 import BannerOverlay from "./components/BannerOverlay";
 import LeaderboardOverlay from "./components/LeaderboardOverlay";
 import HabitHeatmap from "./components/HabitHeatmap";
-//import overlays
 import GachaOverlay from "./components/GachaOverlay";
-// import utils
 import { playSound } from "./utils/soundEngine";
-// import supabase
 import { supabase } from "./supabaseClient";
 import AuthPage from "./AuthPage";
 
-// Helper untuk menghentikan kode sementara (jeda waktu)
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 1. ADD YOUR LIVE URL HERE (No slash at the end)
 const API_URL =
   window.location.hostname === "localhost"
     ? "http://localhost:5000"
@@ -36,19 +28,23 @@ const ITEM_NAME_MAP = {
   sr_dark: "Obsidian Dark Theme",
   sr_gold: "Golden Name Tag",
   ssr_matrix: "Animated Cyberpunk Matrix",
+  ssr_starforge: "Starforge Celestial Theme",
+  ssr_notepad: "Notepad Theme",
+  shop_aurora: "Aurora Dream Theme",
+  shop_crown: "Diamond Crown Tag",
 };
 
 const POOL_ITEMS = [
-  "Cyan Border",
-  "Pink Text Font",
-  "Obsidian Dark Theme",
-  "Golden Name Tag",
-  "Animated Cyberpunk Matrix",
-  "Cyan Border",
-  "Pink Text Font",
-  "Obsidian Dark Theme",
-  "Cyan Border",
-  "Golden Name Tag",
+  { name: "Cyan Border", rarity: "R" },
+  { name: "Pink Text Font", rarity: "R" },
+  { name: "Obsidian Dark Theme", rarity: "SR" },
+  { name: "Golden Name Tag", rarity: "SR" },
+  { name: "Animated Cyberpunk Matrix", rarity: "SSR" },
+  { name: "Cyan Border", rarity: "R" },
+  { name: "Pink Text Font", rarity: "R" },
+  { name: "Obsidian Dark Theme", rarity: "SR" },
+  { name: "Cyan Border", rarity: "R" },
+  { name: "Golden Name Tag", rarity: "SR" },
 ];
 
 function App() {
@@ -77,8 +73,8 @@ function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
 
-  // ── AUTH SESSION ──────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -94,7 +90,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── DASHBOARD FETCH ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!session) return;
 
@@ -111,7 +106,6 @@ function App() {
       .catch((err) => console.error("Error:", err));
   }, [session]);
 
-  // ── HELPER authFetch ──────────────────────────────────────────────────────
   const authFetch = (url, options = {}) => {
     return fetch(url, {
       ...options,
@@ -123,20 +117,16 @@ function App() {
   };
 
   const completeHabit = (habitId) => {
-    // 🛡️ GUARD: Cegah execute jika quest baru saja dibuat & masih proses simpan (ID masih temp_)
     if (typeof habitId === "string" && habitId.startsWith("temp_")) {
       alert("Sabar ya, quest ini sedang disimpan ke server...");
       return;
     }
 
     playSound("complete");
-
-    // 🔥 PENTING: Refresh HabitHeatmap secara real-time
     setActivityTrigger((prev) => prev + 1);
 
     const oldLevel = userData.level || 1;
 
-    // 1. Hitung berapa quest yang sudah selesai untuk Diminishing Returns Frontend
     const completedToday = habits.filter((h) => h.is_completed).length;
     let earnedExp = 50;
     let earnedGems = 30;
@@ -149,7 +139,6 @@ function App() {
       earnedGems = 15;
     }
 
-    // Optimistic update status habit
     setHabits((prev) =>
       prev.map((h) =>
         h.id === habitId
@@ -172,7 +161,6 @@ function App() {
 
     if (levelUp) setTimeout(() => playSound("level_up"), 100);
 
-    // Sync server di belakang
     authFetch(`${API_URL}/api/habits/${habitId}/complete`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
@@ -203,26 +191,33 @@ function App() {
       });
   };
 
-  const rollGacha = async () => {
-    if (userData.gems < 50) {
+  const rollGacha = async (options = {}) => {
+    const {
+      endpoint = "/api/gacha/pull",
+      requireGems = true,
+      body = {},
+    } = options;
+
+    if (requireGems && userData.gems < 50) {
       alert("Gems tidak cukup! Selesaikan quest dulu.");
       return;
     }
 
-    // Reset state & bendera skip sebelum mulai gacha baru
     skipRef.current = false;
     setGachaResult(null);
-    setCurrentRollItem("???");
+    setCurrentRollItem({ name: "???", rarity: null });
     setIsRolling(true);
+    setIsRevealing(false);
     setOverlayVisible(true);
     playSound("pull_click");
 
     try {
-      const fetchPromise = authFetch(`${API_URL}/api/gacha/pull`, {
+      const fetchPromise = authFetch(`${API_URL}${endpoint}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       }).then((res) => res.json());
 
-      // --- LOOP ANIMASI 1 ---
       let delay = 30;
       for (let i = 0; i < 30; i++) {
         if (skipRef.current) break;
@@ -234,7 +229,12 @@ function App() {
         else delay += 4;
       }
 
+      if (skipRef.current) {
+        setIsRevealing(true);
+      }
+
       const data = await fetchPromise;
+      setIsRevealing(false);
 
       if (data.error) {
         setIsRolling(false);
@@ -246,36 +246,42 @@ function App() {
       const resultItem = data.pulledItem;
       const resultName =
         ITEM_NAME_MAP[resultItem?.id] || resultItem?.name || "???";
+      const resultDisplay = { name: resultName, rarity: resultItem?.rarity };
 
-      // --- LOOP ANIMASI 2 (Perlambatan Akhir) ---
       if (!skipRef.current) {
         for (let i = 0; i < 6; i++) {
           if (skipRef.current) break;
 
           setCurrentRollItem(
-            i % 2 === 0 ? POOL_ITEMS[i % POOL_ITEMS.length] : resultName,
+            i % 2 === 0 ? POOL_ITEMS[i % POOL_ITEMS.length] : resultDisplay,
           );
           playSound("gacha_tick");
           await sleep(300 + i * 100);
         }
 
         if (!skipRef.current) {
-          setCurrentRollItem(resultName);
+          setCurrentRollItem(resultDisplay);
           await sleep(100);
         }
       }
 
-      // --- FASE AKHIR (HASIL) ---
-      setCurrentRollItem(resultName);
-      setGachaResult(resultItem);
+      setCurrentRollItem(resultDisplay);
+      setGachaResult({
+        ...resultItem,
+        isDuplicate: data.isDuplicate,
+        shardsEarned: data.shardsEarned,
+        isPityReward: data.isPityReward,
+        bannerResult: data.bannerResult,
+      });
       setUserData(data.user);
       setIsRolling(false);
 
-      if (resultItem?.id?.startsWith("ssr_")) playSound("ssr_drop");
+      if (resultItem?.rarity === "SSR") playSound("ssr_drop");
       else playSound("complete");
     } catch (err) {
       console.error("Error Gacha:", err);
       setIsRolling(false);
+      setIsRevealing(false);
       setOverlayVisible(false);
     }
   };
@@ -283,10 +289,6 @@ function App() {
   const closeOverlay = () => {
     setOverlayVisible(false);
     setGachaResult(null);
-  };
-
-  const handleSkipAnimation = () => {
-    skipRef.current = true;
   };
 
   const addHabit = (e) => {
@@ -348,11 +350,20 @@ function App() {
       });
   };
 
+  const THEME_ITEMS = [
+    "sr_dark",
+    "ssr_matrix",
+    "shop_aurora",
+    "ssr_starforge",
+    "ssr_notepad",
+  ];
+  const FONT_ITEMS = ["r_pink", "sr_gold", "shop_crown"];
+
   const equipItem = (itemId) => {
     setUserData((prev) => {
-      const isTheme = ["sr_dark", "ssr_matrix"].includes(itemId);
+      const isTheme = THEME_ITEMS.includes(itemId);
       const isBorder = itemId === "r_blue";
-      const isFont = ["r_pink", "sr_gold"].includes(itemId);
+      const isFont = FONT_ITEMS.includes(itemId);
       return {
         ...prev,
         equipped_theme: isTheme ? itemId : prev.equipped_theme,
@@ -376,19 +387,54 @@ function App() {
       .catch((err) => console.error("Error equipping:", err));
   };
 
+  const unequipItem = (itemId) => {
+    setUserData((prev) => {
+      const isTheme = THEME_ITEMS.includes(itemId);
+      const isBorder = itemId === "r_blue";
+      const isFont = FONT_ITEMS.includes(itemId);
+      return {
+        ...prev,
+        equipped_theme: isTheme ? null : prev.equipped_theme,
+        equipped_border: isBorder ? null : prev.equipped_border,
+        equipped_font: isFont ? null : prev.equipped_font,
+      };
+    });
+
+    authFetch(`${API_URL}/api/gacha/unequip`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) alert(data.error);
+      })
+      .catch((err) => console.error("Error unequipping:", err));
+  };
+
   const handleQuestSuccess = () => {
     setActivityTrigger((prev) => prev + 1);
   };
 
-  // Dynamic theme layouts
-  const isDarkMode = userData.equipped_theme === "sr_dark";
-  const isMatrixMode = userData.equipped_theme === "ssr_matrix";
+  // ── THEME DETECTION ──────────────────────────────────────────────────────
+  const isDarkMode = userData?.equipped_theme === "sr_dark";
+  const isMatrixMode = userData?.equipped_theme === "ssr_matrix";
+  const isAuroraMode = userData?.equipped_theme === "shop_aurora";
+  const isStarforgeMode = userData?.equipped_theme === "ssr_starforge";
+  const isNotepadMode = userData?.equipped_theme === "ssr_notepad";
 
+  // ── STYLING ──────────────────────────────────────────────────────────────
   const appBackground = isMatrixMode
     ? "bg-black text-green-400 border-2 border-green-500 min-h-screen py-10 px-4 font-mono shadow-[0_0_30px_rgba(34,197,94,0.2)]"
-    : isDarkMode
-      ? "bg-slate-900 text-slate-100 min-h-screen py-10 px-4 font-sans"
-      : "bg-gray-50 text-gray-900 min-h-screen py-10 px-4 font-sans";
+    : isAuroraMode
+      ? "bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 text-slate-100 min-h-screen py-10 px-4 font-sans"
+      : isStarforgeMode
+        ? "bg-gradient-to-b from-slate-950 via-amber-950/50 to-slate-950 text-amber-50 min-h-screen py-10 px-4 font-sans"
+        : isNotepadMode
+          ? "bg-amber-50 text-stone-800 min-h-screen py-10 px-4 font-sans"
+          : isDarkMode
+            ? "bg-slate-900 text-slate-100 min-h-screen py-10 px-4 font-sans"
+            : "bg-white text-gray-900 min-h-screen py-10 px-4 font-sans";
 
   const userCardBorder =
     userData.equipped_border === "r_blue"
@@ -396,11 +442,13 @@ function App() {
       : "border border-transparent";
 
   const nameTagStyle =
-    userData.equipped_font === "sr_gold"
-      ? "text-yellow-400 font-extrabold tracking-widest drop-shadow-[0_2px_8px_rgba(234,179,8,0.6)] animate-bounce"
-      : userData.equipped_font === "r_pink"
-        ? "text-pink-400 font-serif italic font-bold tracking-wide"
-        : "text-white font-bold";
+    userData?.equipped_font === "shop_crown"
+      ? "text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-yellow-300 font-black tracking-widest drop-shadow-[0_2px_10px_rgba(217,70,239,0.6)] animate-pulse"
+      : userData?.equipped_font === "sr_gold"
+        ? "text-yellow-400 font-extrabold tracking-widest drop-shadow-[0_2px_8px_rgba(234,179,8,0.6)] animate-bounce"
+        : userData?.equipped_font === "r_pink"
+          ? "text-pink-400 font-serif italic font-bold tracking-wide"
+          : "text-white font-bold";
 
   const questCardStyle = (isCompleted) => {
     if (isMatrixMode) {
@@ -409,22 +457,44 @@ function App() {
         : "bg-black border border-green-600/50 text-green-500 hover:border-green-400 shadow-[0_0_5px_rgba(34,197,94,0.1)] font-mono";
     }
 
+    if (isAuroraMode) {
+      return isCompleted
+        ? "bg-purple-950/40 border border-fuchsia-500/40 text-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.2)]"
+        : "bg-indigo-900/50 border border-purple-500/30 text-slate-100 hover:border-fuchsia-400/50 shadow-sm";
+    }
+
+    if (isStarforgeMode) {
+      return isCompleted
+        ? "bg-amber-950/30 border border-yellow-500/40 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+        : "bg-slate-900/60 border border-amber-600/30 text-amber-50 hover:border-yellow-400/50 shadow-sm";
+    }
+
+    if (isNotepadMode) {
+      return isCompleted
+        ? "bg-orange-50 border border-orange-200 text-orange-800"
+        : "bg-white border border-stone-200 text-stone-800 hover:shadow-md transition-shadow";
+    }
+
     if (isDarkMode) {
       return isCompleted
         ? "bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 shadow-inner"
         : "bg-slate-800 border border-slate-700 text-slate-100 hover:border-slate-600 shadow-sm";
     }
 
+    // 🖤 DEFAULT: wireframe hitam-putih minimalis
     return isCompleted
-      ? "bg-green-50 border border-green-200 text-green-800"
-      : "bg-white border border-gray-200 text-gray-800 hover:shadow-md transition-shadow";
+      ? "bg-gray-50 border border-gray-300 text-gray-400"
+      : "bg-white border border-gray-300 text-gray-900 hover:border-gray-500 transition-colors";
   };
 
   const questTitleStyle = (isCompleted) => {
     if (isCompleted) return "line-through opacity-60 font-medium";
-    return isMatrixMode
-      ? "text-green-400 font-bold"
-      : "text-gray-900 dark:text-white font-bold";
+    if (isMatrixMode) return "text-green-400 font-bold";
+    if (isAuroraMode) return "text-fuchsia-100 font-bold";
+    if (isStarforgeMode) return "text-amber-100 font-bold";
+    if (isNotepadMode) return "text-stone-900 font-bold";
+    if (isDarkMode) return "text-slate-100 font-bold";
+    return "text-gray-900 font-bold"; // default wireframe
   };
 
   // ── AUTH GUARD ────────────────────────────────────────────────────────────
@@ -442,17 +512,32 @@ function App() {
     setIsRolling(false);
   };
 
-  // 2. Fungsi untuk lewati (skip) animasi gacha
   const skipRoll = () => {
     skipRef.current = true;
-    setIsRolling(false);
   };
 
   return (
     <div
       className={`${appBackground} min-h-screen-mobile p-4 relative overflow-x-hidden`}
     >
-      {/* 1. Sidebar Navigasi */}
+      {/* 🌌 Aurora Glow Blobs */}
+      {isAuroraMode && (
+        <>
+          <div className="absolute top-[-8%] left-[-10%] w-72 h-72 bg-fuchsia-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-[15%] right-[-12%] w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-[-10%] left-[15%] w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+        </>
+      )}
+
+      {/* ✨ Starforge Glow Blobs */}
+      {isStarforgeMode && (
+        <>
+          <div className="absolute top-[-8%] right-[-10%] w-72 h-72 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-[20%] left-[-12%] w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-[-10%] right-[10%] w-96 h-96 bg-orange-400/15 rounded-full blur-3xl pointer-events-none" />
+        </>
+      )}
+
       <Sidebar
         onOpenLeaderboard={() => setShowLeaderboard(true)}
         onOpenBanner={() => setShowBanner(true)}
@@ -460,7 +545,6 @@ function App() {
       />
 
       <div className="max-w-xl mx-auto space-y-4">
-        {/* User Profile */}
         <UserProfile
           userData={userData}
           userCardBorder={userCardBorder}
@@ -468,7 +552,6 @@ function App() {
           onLogout={() => supabase.auth.signOut()}
         />
 
-        {/* Quest Section */}
         <QuestSection
           habits={habits}
           newHabitName={newHabitName}
@@ -478,11 +561,13 @@ function App() {
           deleteHabit={deleteHabit}
           isMatrixMode={isMatrixMode}
           isDarkMode={isDarkMode}
+          isAuroraMode={isAuroraMode}
+          isStarforgeMode={isStarforgeMode}
+          isNotepadMode={isNotepadMode}
           questCardStyle={questCardStyle}
           questTitleStyle={questTitleStyle}
         />
 
-        {/* 🔥 Habit Heatmap Section 🔥 */}
         <HabitHeatmap
           apiUrl={API_URL}
           equippedTheme={userData?.equipped_theme}
@@ -490,34 +575,46 @@ function App() {
           unlockedCosmeticsCount={userData?.inventory?.length || 0}
         />
 
-        {/* Inventory Section */}
         <Inventory
           userData={userData}
           selectedRarityFilter={selectedRarityFilter}
           setSelectedRarityFilter={setSelectedRarityFilter}
           equipItem={equipItem}
+          unequipItem={unequipItem}
           setShowItemIndex={setShowItemIndex}
+          isAuroraMode={isAuroraMode}
+          isMatrixMode={isMatrixMode}
+          isStarforgeMode={isStarforgeMode}
+          isNotepadMode={isNotepadMode}
+          isDarkMode={isDarkMode}
         />
       </div>
 
-      {/* OVERLAY 1: LEADERBOARD */}
       <LeaderboardOverlay
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
       />
 
-      {/* OVERLAY 2: GACHA BANNERS */}
       <BannerOverlay
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
         rollGacha={rollGacha}
         isRolling={isRolling}
+        userData={userData}
       />
 
-      {/* OVERLAY 3: ITEM SHOP */}
-      <ShopOverlay isOpen={showShop} onClose={() => setShowShop(false)} />
+      <ShopOverlay
+        isOpen={showShop}
+        onClose={() => setShowShop(false)}
+        apiUrl={API_URL}
+        authFetch={authFetch}
+        userData={userData}
+        onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
+        onBuyTicket={() => {
+          rollGacha({ endpoint: "/api/shop/buy-ticket", requireGems: false });
+        }}
+      />
 
-      {/* OVERLAY 4: ITEM INDEX */}
       {showItemIndex && (
         <ItemIndex
           userData={userData}
@@ -525,9 +622,9 @@ function App() {
         />
       )}
 
-      {/* 🔥 OVERLAY 5: GACHA ANIMATION & RESULT 🔥 */}
       <GachaOverlay
         isRolling={isRolling}
+        isRevealing={isRevealing}
         currentRollItem={currentRollItem}
         gachaResult={gachaResult}
         closeOverlay={closeGachaOverlay}

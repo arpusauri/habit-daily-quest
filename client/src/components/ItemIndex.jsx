@@ -1,40 +1,77 @@
-import React from "react";
+import React, { useState } from "react";
 
 const MASTER_ITEMS = [
   {
     id: "r_blue",
     name: "Cyan Border",
     rarity: "R",
+    category: "BORDERS",
     desc: "Border warna cyan yang elegan.",
   },
   {
     id: "r_pink",
     name: "Pink Text Font",
     rarity: "R",
+    category: "TITLES",
     desc: "Font dengan warna pink ceria.",
   },
   {
     id: "sr_dark",
     name: "Obsidian Dark Theme",
     rarity: "SR",
+    category: "THEMES",
     desc: "Tema gelap yang misterius.",
   },
   {
     id: "sr_gold",
     name: "Golden Name Tag",
     rarity: "SR",
+    category: "TITLES",
     desc: "Nametag emas berkilau sultan.",
   },
   {
     id: "ssr_matrix",
     name: "Animated Cyberpunk Matrix",
     rarity: "SSR",
-    desc: "Animasi hujan kode matrix.",
+    category: "THEMES",
+    limited: true,
+    desc: "Animasi hujan kode matrix. Eksklusif Limited Banner!",
+  },
+  {
+    id: "ssr_starforge",
+    name: "Starforge Celestial Theme",
+    rarity: "SSR",
+    category: "THEMES",
+    desc: "Langit malam berbintang bertabur cahaya emas.",
+  },
+  {
+    id: "shop_aurora",
+    name: "Aurora Dream Theme",
+    rarity: "SR",
+    category: "THEMES",
+    shopOnly: true,
+    desc: "Cahaya aurora ungu-fuchsia. Eksklusif Shop!",
+  },
+  {
+    id: "shop_crown",
+    name: "Diamond Crown Tag",
+    rarity: "SSR",
+    category: "TITLES",
+    shopOnly: true,
+    desc: "Nametag gradient shimmer. Eksklusif Shop!",
   },
 ];
 
+const CATEGORIES = [
+  { id: "ALL", label: "✨ Semua" },
+  { id: "THEMES", label: "🖼️ Themes" },
+  { id: "BORDERS", label: "🔲 Borders" },
+  { id: "TITLES", label: "🏷️ Titles & Fonts" },
+];
+
 const ItemIndex = ({ userData, onClose }) => {
-  // Helper aman: Pastikan inventory selalu diperlakukan sebagai Array
+  const [activeCategory, setActiveCategory] = useState("ALL");
+
   const checkIsOwned = (itemId) => {
     const userInv = Array.isArray(userData?.inventory)
       ? userData.inventory
@@ -44,9 +81,14 @@ const ItemIndex = ({ userData, onClose }) => {
 
   const ownedCount = MASTER_ITEMS.filter((i) => checkIsOwned(i.id)).length;
 
+  const visibleItems =
+    activeCategory === "ALL"
+      ? MASTER_ITEMS
+      : MASTER_ITEMS.filter((i) => i.category === activeCategory);
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+      <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
           <div>
@@ -66,9 +108,27 @@ const ItemIndex = ({ userData, onClose }) => {
           </button>
         </div>
 
+        {/* Tab Kategori */}
+        <div className="flex gap-1 p-2 border-b border-slate-800 bg-slate-950/40 overflow-x-auto">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCategory(cat.id)}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+                activeCategory === cat.id
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
         {/* List Items Grid */}
         <div className="p-4 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {MASTER_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const isOwned = checkIsOwned(item.id);
 
             const rarityColors = {
@@ -93,21 +153,33 @@ const ItemIndex = ({ userData, onClose }) => {
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <span
-                    className={`text-[10px] font-black px-2 py-0.5 rounded ${
-                      isOwned
-                        ? "bg-slate-950 shadow-sm"
-                        : "bg-slate-800 text-slate-500"
-                    }`}
-                  >
-                    {item.rarity}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[10px] font-black px-2 py-0.5 rounded ${
+                        isOwned
+                          ? "bg-slate-950 shadow-sm"
+                          : "bg-slate-800 text-slate-500"
+                      }`}
+                    >
+                      {item.rarity}
+                    </span>
+                    {item.limited && (
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30">
+                        LIMITED
+                      </span>
+                    )}
+                    {item.shopOnly && (
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30">
+                        SHOP EXCLUSIVE
+                      </span>
+                    )}
+                  </div>
                   {!isOwned ? (
-                    <span className="text-slate-500 text-xs font-semibold">
+                    <span className="text-slate-500 text-xs font-semibold shrink-0">
                       🔒 Locked
                     </span>
                   ) : (
-                    <span className="text-emerald-400 text-xs font-semibold">
+                    <span className="text-emerald-400 text-xs font-semibold shrink-0">
                       ✔️ Owned
                     </span>
                   )}
@@ -122,7 +194,11 @@ const ItemIndex = ({ userData, onClose }) => {
                 <p className="text-xs text-slate-400 line-clamp-2">
                   {isOwned
                     ? item.desc
-                    : "Dapatkan item ini dari gacha banner untuk membuka koleksi."}
+                    : item.shopOnly
+                      ? "Dapatkan item ini dari Shop menggunakan Shards."
+                      : item.limited
+                        ? "Dapatkan item ini dari Limited Banner."
+                        : "Dapatkan item ini dari gacha banner untuk membuka koleksi."}
                 </p>
               </div>
             );
