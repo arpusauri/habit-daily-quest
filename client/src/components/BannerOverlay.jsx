@@ -14,6 +14,7 @@ function BannerOverlay({ isOpen, onClose, rollGacha, isRolling, userData }) {
  const handlePull = () => {
    rollGacha({
      endpoint: "/api/gacha/pull",
+     bannerType: activeBanner,
      body: { bannerType: activeBanner },
    });
  };

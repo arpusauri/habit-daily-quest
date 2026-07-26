@@ -281,6 +281,15 @@ const Inventory = ({
                         ssr_notepad: "SSR",
                       };
 
+                      // Konfigurasi tipe Banner/Tipe Item
+                      const BANNER_TYPE = {
+                        ssr_matrix: "LIMITED",
+                        ssr_starforge: "STANDARD",
+                        ssr_notepad: "STANDARD",
+                        shop_crown: "LIMITED",
+                        // Anda bisa menambahkan item lain ke sini
+                      };
+
                       const rank =
                         SPECIAL_RARITY[itemId] ||
                         (itemId.startsWith("ssr_")
@@ -289,13 +298,16 @@ const Inventory = ({
                             ? "SR"
                             : "R");
 
+                      const bannerType = BANNER_TYPE[itemId]; // Cek apakah item ini LIMITED / STANDARD
+
+                      // ===== PERUBAHAN DI SINI: R Rank Menjadi Hijau =====
                       const rankBadgeClass = isMatrixMode
                         ? "text-green-400 bg-green-400/10 border-green-500/30 font-mono"
                         : rank === "SSR"
                           ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"
                           : rank === "SR"
                             ? "text-purple-400 bg-purple-400/10 border-purple-500/20"
-                            : "text-blue-400 bg-blue-400/10 border-blue-500/20";
+                            : "text-green-400 bg-green-400/10 border-green-500/20"; // R = Green
 
                       const isExclusive =
                         itemId === "shop_aurora" || itemId === "shop_crown";
@@ -325,22 +337,49 @@ const Inventory = ({
                             >
                               {cleanName}
                             </span>
-                            <span
-                              className={`text-[9px] font-black px-2 py-0.5 rounded border mt-1.5 ${rankBadgeClass}`}
-                            >
-                              {rank} RANK
-                            </span>
-                            {isExclusive && (
+
+                            <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                              {/* Rarity Badge */}
                               <span
-                                className={`text-[9px] font-black px-2 py-0.5 rounded border mt-1 ${
-                                  isMatrixMode
-                                    ? "text-green-300 bg-green-400/10 border-green-500/30 font-mono"
-                                    : "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20"
-                                }`}
+                                className={`text-[9px] font-black px-2 py-0.5 rounded border ${rankBadgeClass}`}
                               >
-                                ✦ EXCLUSIVE
+                                {rank} RANK
                               </span>
-                            )}
+
+                              {/* Banner Type Badge (LIMITED / STANDARD) */}
+                              {bannerType && (
+                                <span
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded border transition-all ${
+                                    isMatrixMode
+                                      ? bannerType === "LIMITED"
+                                        ? "bg-green-400 text-black border-green-400 font-mono shadow-[0_0_5px_rgba(74,222,128,0.4)]"
+                                        : "bg-green-950/20 text-green-500 border-green-700/50 font-mono"
+                                      : bannerType === "LIMITED"
+                                        ? "text-blue-400 bg-blue-400/10 border-blue-500/20"
+                                        : "text-orange-400 bg-orange-400/10 border-orange-500/30"
+                                  }`}
+                                >
+                                  {isMatrixMode
+                                    ? bannerType === "LIMITED"
+                                      ? "◆ LIMITED"
+                                      : "▤ STANDARD"
+                                    : `${bannerType === "LIMITED" ? "🔹" : "🎫"} ${bannerType}`}
+                                </span>
+                              )}
+
+                              {/* Exclusive Badge */}
+                              {isExclusive && (
+                                <span
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded border ${
+                                    isMatrixMode
+                                      ? "text-green-300 bg-green-400/10 border-green-500/30 font-mono"
+                                      : "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20"
+                                  }`}
+                                >
+                                  ✦ EXCLUSIVE
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <button

@@ -13,12 +13,6 @@ const HabitHeatmap = ({
 
   unlockedCosmeticsCount,
 }) => {
-  // ── THEME DETECTION (FIXED) ──────────────────────────────────────────────
-  // equippedTheme hanya pernah berisi salah satu dari:
-  // "sr_dark" | "ssr_matrix" | "shop_aurora" | "ssr_starforge" | "ssr_notepad" | null
-  // Sebelumnya isNotepadMode = !equippedTheme, yang salah karena itu berarti
-  // "tidak ada tema" dianggap notepad, sementara tema notepad ("ssr_notepad")
-  // sungguhan malah tidak pernah match ke branch manapun.
   const isMatrixMode = equippedTheme === "ssr_matrix";
   const isAuroraMode = equippedTheme === "shop_aurora";
   const isStarforgeMode = equippedTheme === "ssr_starforge";
@@ -30,8 +24,6 @@ const HabitHeatmap = ({
   const [rawApiData, setRawApiData] = useState([]);
 
   const [loading, setLoading] = useState(true);
-
-  // 1. Fetch Data dari Backend
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -47,8 +39,6 @@ const HabitHeatmap = ({
 
           return;
         }
-
-        // 🔥 UBAH BARIS INI: Tambahkan ${apiUrl} di depan URL endpoint
 
         const response = await fetch(`${apiUrl}/api/activity-history`, {
           headers: {
@@ -73,8 +63,6 @@ const HabitHeatmap = ({
     fetchActivity();
   }, [refreshTrigger, apiUrl]);
 
-  // Map Data API untuk O(1) Quick Lookup
-
   const dataMap = useMemo(() => {
     const map = new Map();
 
@@ -83,16 +71,10 @@ const HabitHeatmap = ({
     return map;
   }, [rawApiData]);
 
-  // -------------------------------------------------------------
-
-  // DATA HELPER 1: THIS WEEK (Senin - Minggu)
-
-  // -------------------------------------------------------------
-
   const weekData = useMemo(() => {
     const today = new Date();
 
-    const currentDay = today.getDay(); // 0: Sun, 1: Mon, ...
+    const currentDay = today.getDay();
 
     const diffToMon = currentDay === 0 ? 6 : currentDay - 1;
 
@@ -134,12 +116,6 @@ const HabitHeatmap = ({
 
     return list;
   }, [dataMap]);
-
-  // -------------------------------------------------------------
-
-  // DATA HELPER 2: THIS MONTH (Grid Kalender Matriks 1 Bulan)
-
-  // -------------------------------------------------------------
 
   const monthCalendarData = useMemo(() => {
     const today = new Date();
@@ -199,12 +175,6 @@ const HabitHeatmap = ({
     return { cells, monthName };
   }, [dataMap]);
 
-  // -------------------------------------------------------------
-
-  // DATA HELPER 3: KESELURUHAN (365 Hari + Stats Summary)
-
-  // -------------------------------------------------------------
-
   const yearData = useMemo(() => {
     const list = [];
 
@@ -231,8 +201,6 @@ const HabitHeatmap = ({
     return list;
   }, [dataMap]);
 
-  // Hitung Statistik RPG Keseluruhan
-
   const overallStats = useMemo(() => {
     let activeDays = 0;
 
@@ -249,8 +217,6 @@ const HabitHeatmap = ({
     return { activeDays, maxSingleDay };
   }, [yearData]);
 
-  // Hitung Total Quest yang Aktif Berdasarkan Tab
-
   const activeTotalQuests = useMemo(() => {
     if (activeTab === "week") {
       return weekData.reduce((acc, curr) => acc + (curr.count || 0), 0);
@@ -265,14 +231,8 @@ const HabitHeatmap = ({
     }
   }, [activeTab, weekData, monthCalendarData, yearData]);
 
-  // -------------------------------------------------------------
-
-  // TEMA WARNA RPG (FIXED: tambah case "sr_dark" & "ssr_notepad" eksplisit,
-  // r_blue/r_pink dihapus karena bukan id tema — equippedTheme tidak pernah
-  // berisi border/font id, itu disimpan terpisah di equipped_border/equipped_font)
-
-  // -------------------------------------------------------------
-
+  // TEMA WARNA RPG — tiap tema punya `activeText` sendiri sekarang, biar
+  // teks di atas `activeBg` selalu kebaca gak peduli terang/gelap-nya activeBg.
   const themeConfig = useMemo(() => {
     switch (equippedTheme) {
       case "sr_dark":
@@ -280,6 +240,7 @@ const HabitHeatmap = ({
           colors: ["#0f172a", "#312e81", "#4338ca", "#6366f1", "#a5b4fc"],
 
           activeBg: "bg-indigo-500",
+          activeText: "text-slate-950",
 
           textAccent: "text-indigo-400",
 
@@ -293,6 +254,7 @@ const HabitHeatmap = ({
           colors: ["#1e1b4b", "#a21caf", "#c026d3", "#e879f9", "#f0abfc"],
 
           activeBg: "bg-fuchsia-500",
+          activeText: "text-slate-950",
 
           textAccent: "text-fuchsia-300",
 
@@ -306,6 +268,7 @@ const HabitHeatmap = ({
           colors: ["#1c1305", "#78350f", "#b45309", "#f59e0b", "#fde68a"],
 
           activeBg: "bg-amber-500",
+          activeText: "text-slate-950",
 
           textAccent: "text-amber-300",
 
@@ -319,6 +282,7 @@ const HabitHeatmap = ({
           colors: ["#0d1117", "#0e4429", "#006d32", "#26a641", "#39d353"],
 
           activeBg: "bg-green-500",
+          activeText: "text-slate-950",
 
           textAccent: "text-green-400",
 
@@ -332,6 +296,7 @@ const HabitHeatmap = ({
           colors: ["#fef3e2", "#fed7aa", "#fdba74", "#fb923c", "#ea580c"],
 
           activeBg: "bg-orange-500",
+          activeText: "text-slate-950",
 
           textAccent: "text-orange-600",
 
@@ -345,7 +310,8 @@ const HabitHeatmap = ({
         return {
           colors: ["#f1f5f9", "#cbd5e1", "#94a3b8", "#64748b", "#334155"],
 
-          activeBg: "bg-slate-700",
+          activeBg: "bg-gray-900",
+          activeText: "text-white",
 
           textAccent: "text-slate-600",
 
@@ -413,7 +379,7 @@ const HabitHeatmap = ({
             onClick={() => setActiveTab("week")}
             className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap ${
               activeTab === "week"
-                ? `${themeConfig.activeBg} text-slate-950 font-bold shadow-md`
+                ? `${themeConfig.activeBg} ${themeConfig.activeText} font-bold shadow-md`
                 : isMatrixMode
                   ? "text-green-600 hover:text-green-300"
                   : isNotepadMode
@@ -430,7 +396,7 @@ const HabitHeatmap = ({
             onClick={() => setActiveTab("month")}
             className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap ${
               activeTab === "month"
-                ? `${themeConfig.activeBg} text-slate-950 font-bold shadow-md`
+                ? `${themeConfig.activeBg} ${themeConfig.activeText} font-bold shadow-md`
                 : isMatrixMode
                   ? "text-green-600 hover:text-green-300"
                   : isNotepadMode
@@ -447,7 +413,7 @@ const HabitHeatmap = ({
             onClick={() => setActiveTab("all")}
             className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap ${
               activeTab === "all"
-                ? `${themeConfig.activeBg} text-slate-950 font-bold shadow-md`
+                ? `${themeConfig.activeBg} ${themeConfig.activeText} font-bold shadow-md`
                 : isMatrixMode
                   ? "text-green-600 hover:text-green-300"
                   : isNotepadMode
@@ -496,9 +462,13 @@ const HabitHeatmap = ({
                           ? "ring-2 ring-green-400/80 bg-green-950/30"
                           : isNotepadMode
                             ? "ring-2 ring-orange-400/70 bg-orange-100/70"
-                            : isDarkMode || isAuroraMode || isStarforgeMode
-                              ? "ring-2 ring-emerald-400/80 bg-slate-800/90"
-                              : "ring-2 ring-gray-900/40 bg-gray-100"
+                            : isDarkMode
+                              ? "ring-2 ring-indigo-400/80 bg-slate-800/90"
+                              : isAuroraMode
+                                ? "ring-2 ring-fuchsia-400/80 bg-slate-800/90"
+                                : isStarforgeMode
+                                  ? "ring-2 ring-amber-400/80 bg-slate-800/90"
+                                  : "ring-2 ring-gray-900/40 bg-gray-100"
                         : isMatrixMode
                           ? "bg-black"
                           : isNotepadMode
@@ -549,7 +519,7 @@ const HabitHeatmap = ({
                     <div
                       className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-extrabold ${
                         hasQuest
-                          ? `${themeConfig.activeBg} text-slate-950 shadow-sm`
+                          ? `${themeConfig.activeBg} ${themeConfig.activeText} shadow-sm`
                           : isMatrixMode
                             ? "bg-green-950/50 text-green-700"
                             : isNotepadMode
@@ -634,9 +604,13 @@ const HabitHeatmap = ({
                             ? "ring-2 ring-green-400/90 bg-green-950/30 font-extrabold"
                             : isNotepadMode
                               ? "ring-2 ring-orange-400/80 bg-orange-100 font-extrabold"
-                              : isDarkMode || isAuroraMode || isStarforgeMode
-                                ? "ring-2 ring-emerald-400/90 bg-slate-800 font-extrabold"
-                                : "ring-2 ring-gray-900/40 bg-gray-100 font-extrabold"
+                              : isDarkMode
+                                ? "ring-2 ring-indigo-400/90 bg-slate-800 font-extrabold"
+                                : isAuroraMode
+                                  ? "ring-2 ring-fuchsia-400/90 bg-slate-800 font-extrabold"
+                                  : isStarforgeMode
+                                    ? "ring-2 ring-amber-400/90 bg-slate-800 font-extrabold"
+                                    : "ring-2 ring-gray-900/40 bg-gray-100 font-extrabold"
                           : isMatrixMode
                             ? "bg-black"
                             : isNotepadMode
@@ -672,7 +646,7 @@ const HabitHeatmap = ({
 
                       {hasQuest && (
                         <span
-                          className={`absolute -top-1 -right-1 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ${themeConfig.activeBg} text-slate-950 shadow-sm`}
+                          className={`absolute -top-1 -right-1 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ${themeConfig.activeBg} ${themeConfig.activeText} shadow-sm`}
                         >
                           {cell.count}
                         </span>
