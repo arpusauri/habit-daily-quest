@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
-function LeaderboardOverlay({ isOpen, onClose }) {
+function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
   const [tab, setTab] = useState("level"); // 'level' | 'streak'
   const [leaderboard, setLeaderboard] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,12 +16,42 @@ function LeaderboardOverlay({ isOpen, onClose }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Fetch data leaderboard saat overlay dibuka atau tab berubah
+  // Fetch/search data setiap kali overlay dibuka, tab berubah, atau user ngetik search
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    if (searchQuery.trim() === "") {
       fetchLeaderboard();
+      return;
     }
-  }, [isOpen, tab]);
+
+    const timeout = setTimeout(() => searchPlayers(searchQuery), 300); // debounce
+    return () => clearTimeout(timeout);
+  }, [searchQuery, isOpen, tab]);
+
+  const searchPlayers = async (query) => {
+    setLoading(true);
+    try {
+      const isNumeric = /^\d+$/.test(query.trim());
+      const { data, error } = isNumeric
+        ? await supabase
+            .from("users")
+            .select("id, username, level, exp, last_login")
+            .eq("id", query.trim())
+        : await supabase
+            .from("users")
+            .select("id, username, level, exp, last_login")
+            .ilike("username", `%${query.trim()}%`)
+            .limit(20);
+
+      if (error) throw error;
+      setLeaderboard(data || []);
+    } catch (err) {
+      console.error("Error searching players:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchLeaderboard = async () => {
     setLoading(true);
@@ -29,7 +59,7 @@ function LeaderboardOverlay({ isOpen, onClose }) {
       if (tab === "level") {
         const { data, error } = await supabase
           .from("users")
-          .select("id, username, level, exp")
+          .select("id, username, level, exp, last_login")
           .order("level", { ascending: false })
           .order("exp", { ascending: false })
           .limit(20);
@@ -39,7 +69,7 @@ function LeaderboardOverlay({ isOpen, onClose }) {
       } else {
         const { data, error } = await supabase
           .from("users")
-          .select("id, username, level, habits(streak)");
+          .select("id, username, level, last_login, habits(streak)");
 
         if (error) throw error;
 
@@ -70,9 +100,13 @@ function LeaderboardOverlay({ isOpen, onClose }) {
     return `#${index + 1}`;
   };
 
-  const filteredLeaderboard = leaderboard.filter((player) =>
-    (player.username || "").toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const formatLastSeen = (dateStr) => {
+    if (!dateStr) return "—";
+    const days = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+    if (days === 0) return "Hari ini";
+    if (days === 1) return "Kemarin";
+    return `${days} hari lalu`;
+  };
 
   if (!isOpen) return null;
 
@@ -132,7 +166,7 @@ function LeaderboardOverlay({ isOpen, onClose }) {
           <div className="relative">
             <input
               type="text"
-              placeholder="🔍 Cari username pemain..."
+              placeholder="🔍 Cari username atau UID pemain..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
@@ -155,17 +189,18 @@ function LeaderboardOverlay({ isOpen, onClose }) {
             <div className="py-12 text-center text-gray-400 text-sm animate-pulse">
               Memuat peringkat...
             </div>
-          ) : filteredLeaderboard.length === 0 ? (
+          ) : leaderboard.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-sm">
               {searchQuery
                 ? `Tidak ada pemain "${searchQuery}"`
                 : "Belum ada data."}
             </div>
           ) : (
-            filteredLeaderboard.map((player, index) => (
+            leaderboard.map((player, index) => (
               <div
                 key={player.id || index}
-                className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:border-slate-600 transition-all"
+                onClick={() => onViewPlayer && onViewPlayer(player.id)}
+                className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:border-slate-600 hover:bg-slate-800 cursor-pointer transition-all"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-base font-bold w-6 text-center">
@@ -176,7 +211,8 @@ function LeaderboardOverlay({ isOpen, onClose }) {
                       {player.username}
                     </p>
                     <p className="text-[11px] text-gray-400">
-                      Lv. {player.level || 1}
+                      Lv. {player.level || 1} ·{" "}
+                      {formatLastSeen(player.last_login)}
                     </p>
                   </div>
                 </div>

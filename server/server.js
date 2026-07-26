@@ -246,10 +246,9 @@ app.post("/api/auth/login", async (req, res) => {
 // 5. SECURE GAME ROUTES (Diproteksi Token)
 // ==========================================
 
-// [GET] Dashboard Data (Diubah dari ID=1 ke Dinamis req.userId)
 app.get("/api/dashboard", authenticateUser, async (req, res) => {
   try {
-    const userId = req.userId; // Dapatkan ID dari middleware aman
+    const userId = req.userId;
 
     const userResult = await pool.query("SELECT * FROM users WHERE id = $1", [
       userId,
@@ -260,43 +259,12 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
     const user = userResult.rows[0];
     const todayStr = new Date().toISOString().split("T")[0];
 
-    if (user.last_reset !== todayStr) {
-      console.log(
-        `[RESET] New day detected! Resetting quests for user ${userId}.`,
-      );
-
-      // 🔥 Cek habit yang KEMARIN gak sempet diselesaikan (bakal ke-reset streaknya)
-      const missedHabits = await pool.query(
-        "SELECT id FROM habits WHERE user_id = $1 AND is_completed = false AND streak > 0",
-        [userId],
-      );
-
-      if (missedHabits.rows.length > 0) {
-        if (user.streak_shield > 0) {
-          // Ada shield! Konsumsi 1, streak semua habit yang kelewat tetep aman
-          await pool.query(
-            "UPDATE users SET streak_shield = streak_shield - 1 WHERE id = $1",
-            [userId],
-          );
-          console.log(`[SHIELD] Streak shield digunakan untuk user ${userId}.`);
-        } else {
-          // Gak ada shield, reset streak habit yang kelewat ke 0
-          await pool.query(
-            "UPDATE habits SET streak = 0 WHERE user_id = $1 AND is_completed = false",
-            [userId],
-          );
-        }
-      }
-
+    if (user.last_login?.toISOString().split("T")[0] !== todayStr) {
       await pool.query(
-        "UPDATE habits SET is_completed = false WHERE user_id = $1",
+        "UPDATE users SET last_login = CURRENT_DATE WHERE id = $1",
         [userId],
       );
-      await pool.query("UPDATE users SET last_reset = $1 WHERE id = $2", [
-        todayStr,
-        userId,
-      ]);
-      user.last_reset = todayStr;
+      user.last_login = new Date(todayStr);
     }
 
     const habitsResult = await pool.query(
@@ -309,10 +277,57 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
     );
     const inventory = inventoryResult.rows.map((row) => row.item_id);
 
+    // 🏆 Hitung leaderboard rank
+    const leaderboardResult = await pool.query(
+      `SELECT COUNT(*) as rank FROM users WHERE level > $1 OR (level = $1 AND exp > $2)`,
+      [user.level, user.exp || 0],
+    );
+    const leaderboardRank = (leaderboardResult.rows[0].rank || 0) + 1;
+
+    const totalPlayersResult = await pool.query(
+      "SELECT COUNT(*) as total FROM users",
+    );
+    const totalPlayers = totalPlayersResult.rows[0].total || 0;
+
+    // 📊 Hitung total pulls dari gacha_history
+    const totalPullsResult = await pool.query(
+      `SELECT COUNT(*) as total FROM gacha_history WHERE user_id = $1`,
+      [userId],
+    );
+    const totalPulls = totalPullsResult.rows[0].total || 0;
+
+    // 📊 Hitung active days dari daily_activity (sama kayak heatmap)
+    const activityResult = await pool.query(
+      `SELECT COUNT(*) as total FROM daily_activity 
+   WHERE user_id = $1 AND completed_count > 0`,
+      [userId],
+    );
+    const activeDays = activityResult.rows[0].total || 0;
+
+    // 📊 Hitung total quests dari daily_activity (sama kayak heatmap)
+    const totalQuestsResult = await pool.query(
+      `SELECT SUM(completed_count) as total FROM daily_activity 
+   WHERE user_id = $1`,
+      [userId],
+    );
+    const totalQuestsCompleted = totalQuestsResult.rows[0].total || 0;
+
+    const cosmeticsCountResult = await pool.query(
+      `SELECT COUNT(*) as total FROM inventory WHERE user_id = $1`,
+      [userId],
+    );
+    const cosmeticsCount = cosmeticsCountResult.rows[0].total || 0;
+
     res.json({
       user: {
         ...user,
         inventory: inventory,
+        leaderboardRank,
+        totalPlayers,
+        totalPulls,
+        totalQuestsCompleted,
+        activeDays,
+        cosmeticsCount,
       },
       habits: habitsResult.rows,
     });
@@ -358,8 +373,9 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
 
     // 3. Tandai quest selesai & tambah streak
     await pool.query(
-      "UPDATE habits SET is_completed = true, streak = streak + 1 WHERE id = $1",
-      [habitId],
+      `UPDATE habits SET is_completed = true, completed_at = CURRENT_TIMESTAMP 
+       WHERE id = $1 AND user_id = $2`,
+      [habitId, userId],
     );
 
     // 🔥 3.5 UPSERT DATA KE DAILY_ACTIVITY (UNTUK HEATMAP) 🔥
@@ -441,7 +457,7 @@ app.get("/api/activity-history", authenticateUser, async (req, res) => {
 
     // Format output sesuai kebutuhan react-activity-calendar
     const formattedData = result.rows.map((row) => {
-      const count = parseInt(row.completed_count);
+      const count = parseInt(row.completed_count) || 0;
       let level = 0;
       if (count >= 10) level = 4;
       else if (count >= 5) level = 3;
@@ -779,6 +795,20 @@ app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
     ]);
 
     const result = await performGachaPull(userId, bannerType);
+
+    // 📊 TAMBAH SINI: Insert ke gacha_history
+    await pool.query(
+      `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        userId,
+        result.pulledItem.id,
+        result.pulledItem.name,
+        result.pulledItem.rarity,
+        bannerType,
+      ],
+    );
+
     res.json(result);
   } catch (err) {
     console.error(err.message);
@@ -793,7 +823,7 @@ app.get("/api/shop/items", authenticateUser, async (req, res) => {
 
     const invResult = await pool.query(
       "SELECT item_id FROM inventory WHERE user_id = $1",
-      [userId]
+      [userId],
     );
     const ownedIds = invResult.rows.map((row) => row.item_id);
 
@@ -811,7 +841,7 @@ app.get("/api/shop/items", authenticateUser, async (req, res) => {
 
     const userResult = await pool.query(
       "SELECT shards FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
 
     res.json({
@@ -839,21 +869,21 @@ app.post("/api/shop/redeem", authenticateUser, async (req, res) => {
 
     const checkOwn = await pool.query(
       "SELECT * FROM inventory WHERE user_id = $1 AND item_id = $2",
-      [userId, itemId]
+      [userId, itemId],
     );
     if (checkOwn.rows.length > 0) {
       return res.status(400).json({ error: "Kamu sudah punya item ini!" });
     }
 
-   const SHARD_PRICE = { R: 100, SR: 300, SSR: 800 };
-   const SHOP_EXCLUSIVE_PRICE = { R: 150, SR: 450, SSR: 1200 };
-   const price = item.shopOnly
-     ? SHOP_EXCLUSIVE_PRICE[item.rarity]
-     : SHARD_PRICE[item.rarity];
+    const SHARD_PRICE = { R: 100, SR: 300, SSR: 800 };
+    const SHOP_EXCLUSIVE_PRICE = { R: 150, SR: 450, SSR: 1200 };
+    const price = item.shopOnly
+      ? SHOP_EXCLUSIVE_PRICE[item.rarity]
+      : SHARD_PRICE[item.rarity];
 
     const userCheck = await pool.query(
       "SELECT shards FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
     if (userCheck.rows[0].shards < price) {
       return res.status(400).json({ error: "Shards tidak cukup!" });
@@ -865,7 +895,7 @@ app.post("/api/shop/redeem", authenticateUser, async (req, res) => {
     ]);
     await pool.query(
       "INSERT INTO inventory (user_id, item_id) VALUES ($1, $2)",
-      [userId, itemId]
+      [userId, itemId],
     );
 
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
@@ -873,7 +903,7 @@ app.post("/api/shop/redeem", authenticateUser, async (req, res) => {
     ]);
     const inventoryResult = await pool.query(
       "SELECT item_id FROM inventory WHERE user_id = $1",
-      [userId]
+      [userId],
     );
 
     const formattedUser = {
@@ -897,18 +927,31 @@ app.post("/api/shop/buy-ticket", authenticateUser, async (req, res) => {
 
     const userCheck = await pool.query(
       "SELECT shards FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
-    if (userCheck.rows[0].shards < TICKET_PRICE) {
-      return res.status(400).json({ error: "Shards tidak cukup!" });
+    if (userCheck.rows[0].shards < 60) {
+      return res.status(400).json({ error: "Not enough Shards!" });
     }
 
-    await pool.query("UPDATE users SET shards = shards - $1 WHERE id = $2", [
-      TICKET_PRICE,
+    await pool.query("UPDATE users SET shards = shards - 60 WHERE id = $1", [
       userId,
     ]);
 
-    const result = await performGachaPull(userId);
+    const result = await performGachaPull(userId, "standard");
+
+    // 📊 Insert gacha history
+    await pool.query(
+      `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        userId,
+        result.pulledItem.id,
+        result.pulledItem.name,
+        result.pulledItem.rarity,
+        "ticket",
+      ],
+    );
+
     res.json(result);
   } catch (err) {
     console.error(err.message);
@@ -925,7 +968,7 @@ app.post("/api/shop/buy-shield", authenticateUser, async (req, res) => {
 
     const userCheck = await pool.query(
       "SELECT shards FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
     if (userCheck.rows[0].shards < SHIELD_PRICE) {
       return res.status(400).json({ error: "Shards tidak cukup!" });
@@ -933,7 +976,7 @@ app.post("/api/shop/buy-shield", authenticateUser, async (req, res) => {
 
     await pool.query(
       "UPDATE users SET shards = shards - $1, streak_shield = streak_shield + 1 WHERE id = $2",
-      [SHIELD_PRICE, userId]
+      [SHIELD_PRICE, userId],
     );
 
     const updatedUser = await pool.query("SELECT * FROM users WHERE id = $1", [
@@ -941,7 +984,7 @@ app.post("/api/shop/buy-shield", authenticateUser, async (req, res) => {
     ]);
     const inventoryResult = await pool.query(
       "SELECT item_id FROM inventory WHERE user_id = $1",
-      [userId]
+      [userId],
     );
 
     const formattedUser = {
