@@ -35,15 +35,33 @@ const ITEM_NAME_MAP = {
 };
 
 const POOL_ITEMS = [
+  // Standard pool items (yang bisa keluar dari Standard banner + Limited lose 50/50)
   { name: "Cyan Border", rarity: "R" },
   { name: "Pink Text Font", rarity: "R" },
   { name: "Obsidian Dark Theme", rarity: "SR" },
   { name: "Golden Name Tag", rarity: "SR" },
-  { name: "Animated Cyberpunk Matrix", rarity: "SSR" },
+  { name: "Starforge Celestial Theme", rarity: "SSR" },
+  { name: "Notepad Theme", rarity: "SSR" },
+  // Duplikat buat lebih tinggi chance munculnya di animasi (opsional)
   { name: "Cyan Border", rarity: "R" },
   { name: "Pink Text Font", rarity: "R" },
   { name: "Obsidian Dark Theme", rarity: "SR" },
+  { name: "Golden Name Tag", rarity: "SR" },
+];
+
+// Separate pool HANYA untuk animasi Limited banner (biar matrix keliatan di animasi)
+const LIMITED_POOL_ITEMS = [
   { name: "Cyan Border", rarity: "R" },
+  { name: "Pink Text Font", rarity: "R" },
+  { name: "Obsidian Dark Theme", rarity: "SR" },
+  { name: "Golden Name Tag", rarity: "SR" },
+  { name: "Starforge Celestial Theme", rarity: "SSR" },
+  { name: "Notepad Theme", rarity: "SSR" },
+  { name: "Animated Cyberpunk Matrix", rarity: "SSR" }, // ← Rate-up item
+  // Duplikat
+  { name: "Cyan Border", rarity: "R" },
+  { name: "Pink Text Font", rarity: "R" },
+  { name: "Obsidian Dark Theme", rarity: "SR" },
   { name: "Golden Name Tag", rarity: "SR" },
 ];
 
@@ -196,6 +214,7 @@ function App() {
       endpoint = "/api/gacha/pull",
       requireGems = true,
       body = {},
+      bannerType = "standard", // ← tambah default
     } = options;
 
     if (requireGems && userData.gems < 50) {
@@ -219,10 +238,13 @@ function App() {
       }).then((res) => res.json());
 
       let delay = 30;
+      const animationPool =
+        bannerType === "limited" ? LIMITED_POOL_ITEMS : POOL_ITEMS;
+
       for (let i = 0; i < 30; i++) {
         if (skipRef.current) break;
 
-        setCurrentRollItem(POOL_ITEMS[i % POOL_ITEMS.length]);
+        setCurrentRollItem(animationPool[i % animationPool.length]);
         playSound("gacha_tick");
         await sleep(delay);
         if (i > 20) delay += 55;
@@ -249,19 +271,32 @@ function App() {
       const resultDisplay = { name: resultName, rarity: resultItem?.rarity };
 
       if (!skipRef.current) {
-        for (let i = 0; i < 6; i++) {
-          if (skipRef.current) break;
+        const isPityOrSSR = data.isPityReward || resultItem?.rarity === "SSR";
 
-          setCurrentRollItem(
-            i % 2 === 0 ? POOL_ITEMS[i % POOL_ITEMS.length] : resultDisplay,
-          );
-          playSound("gacha_tick");
-          await sleep(300 + i * 100);
-        }
-
-        if (!skipRef.current) {
+        if (isPityOrSSR) {
+          // Kalau pity/SSR, langsung final reveal (skip animasi alternate SR/SSR)
           setCurrentRollItem(resultDisplay);
-          await sleep(100);
+          await sleep(400);
+        } else {
+          // Kalau R/SR, baru alternate animation sebelum reveal
+          for (let i = 0; i < 6; i++) {
+            if (skipRef.current) break;
+
+            const animationPool =
+              bannerType === "limited" ? LIMITED_POOL_ITEMS : POOL_ITEMS;
+            setCurrentRollItem(
+              i % 2 === 0
+                ? animationPool[i % animationPool.length]
+                : resultDisplay,
+            );
+            playSound("gacha_tick");
+            await sleep(300 + i * 100);
+          }
+
+          if (!skipRef.current) {
+            setCurrentRollItem(resultDisplay);
+            await sleep(100);
+          }
         }
       }
 
@@ -522,20 +557,20 @@ function App() {
     >
       {/* 🌌 Aurora Glow Blobs */}
       {isAuroraMode && (
-        <>
-          <div className="absolute top-[-8%] left-[-10%] w-72 h-72 bg-fuchsia-500/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-[15%] right-[-12%] w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-[-10%] left-[15%] w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
-        </>
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-8%] left-[-10%] w-72 h-72 bg-fuchsia-500/20 rounded-full blur-3xl" />
+          <div className="absolute top-[15%] right-[-12%] w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-[-10%] left-[15%] w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+        </div>
       )}
 
       {/* ✨ Starforge Glow Blobs */}
       {isStarforgeMode && (
-        <>
-          <div className="absolute top-[-8%] right-[-10%] w-72 h-72 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-[20%] left-[-12%] w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-[-10%] right-[10%] w-96 h-96 bg-orange-400/15 rounded-full blur-3xl pointer-events-none" />
-        </>
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-8%] right-[-10%] w-72 h-72 bg-amber-400/20 rounded-full blur-3xl" />
+          <div className="absolute top-[20%] left-[-12%] w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-[-10%] right-[10%] w-96 h-96 bg-orange-400/15 rounded-full blur-3xl" />
+        </div>
       )}
 
       <Sidebar

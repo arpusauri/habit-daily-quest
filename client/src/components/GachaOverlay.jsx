@@ -14,10 +14,11 @@ const RARITY_STYLE = {
     ring: "border-purple-500/70 shadow-[0_0_15px_rgba(168,85,247,0.3)]",
   },
   R: {
-    text: "text-blue-400",
-    border: "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.4)]",
-    badge: "bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/30",
-    ring: "border-blue-500/70 shadow-[0_0_12px_rgba(59,130,246,0.3)]",
+    // ===== PERUBAHAN DI SINI: R Rank Menjadi Hijau =====
+    text: "text-green-400",
+    border: "border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]",
+    badge: "bg-green-600 text-white hover:bg-green-500 shadow-green-500/30",
+    ring: "border-green-500/70 shadow-[0_0_12px_rgba(34,197,94,0.3)]",
   },
   default: {
     text: "text-slate-200",
@@ -124,7 +125,7 @@ const GachaOverlay = ({
               ? "🏆 SSR RANK UNLOCKED"
               : resultRarity === "SR"
                 ? "✨ SR RANK UNLOCKED"
-                : "🔹 RARE RANK UNLOCKED"}
+                : "🌿 RARE RANK UNLOCKED"}
           </span>
 
           <div className="mt-6 mb-2">
@@ -136,10 +137,15 @@ const GachaOverlay = ({
             </h2>
           </div>
 
-          {/* 🔥 Badge 50/50 Win/Lose */}
+          {/* 🔥 Badge 50/50 Win/Lose/Guaranteed */}
           {gachaResult?.bannerResult === "limited_win" && (
             <div className="mt-3 inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/40 text-yellow-300 text-xs font-bold px-3 py-1.5 rounded-full">
               🎉 Menang 50/50!
+            </div>
+          )}
+          {gachaResult?.bannerResult === "limited_guaranteed" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-full">
+              🎯 Guaranteed Rate-Up!
             </div>
           )}
           {gachaResult?.bannerResult === "limited_lose" && (

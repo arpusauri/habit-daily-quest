@@ -670,12 +670,13 @@ async function performGachaPull(userId, bannerType = "standard") {
     pity = 0; // reset pity setiap kali SSR-tier kena
 
     if (bannerType === "limited") {
+      const wasGuaranteed = guaranteed; // simpen dulu sebelum di-overwrite
       const winLimited = guaranteed || Math.random() < 0.5;
 
       if (winLimited) {
         pulledItem = COSMETIC_POOL.find((i) => i.id === "ssr_matrix");
         guaranteed = false;
-        bannerResult = "limited_win";
+        bannerResult = wasGuaranteed ? "limited_guaranteed" : "limited_win";
       } else {
         const ssrPool = COSMETIC_POOL.filter(
           (i) => i.rarity === "SSR" && !i.shopOnly && !i.limited,

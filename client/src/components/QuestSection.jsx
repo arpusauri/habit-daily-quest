@@ -18,7 +18,21 @@ const QuestSection = ({
   return (
     <div className="w-full">
       {/* Section Judul Daily Quests */}
-      <div className="text-left mt-8 mb-4 border-b border-gray-700/40 pb-2">
+      <div
+        className={`text-left mt-8 mb-4 border-b pb-2 transition-colors duration-300 ${
+          isMatrixMode
+            ? "border-green-600/50 border-dashed" // Garis putus-putus hijau untuk kesan terminal
+            : isAuroraMode
+              ? "border-purple-500/40" // Garis ungu transparan
+              : isStarforgeMode
+                ? "border-amber-600/40" // Garis emas transparan
+                : isNotepadMode
+                  ? "border-orange-300" // Garis oranye lembut untuk buku catatan
+                  : isDarkMode
+                    ? "border-slate-700" // Garis abu-abu gelap
+                    : "border-gray-300" // Garis abu-abu terang untuk default
+          }`}
+      >
         <h2
           className={`text-2xl font-black tracking-wide ${
             isMatrixMode
@@ -28,7 +42,7 @@ const QuestSection = ({
                 : isStarforgeMode
                   ? "text-amber-100 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]"
                   : isNotepadMode
-                    ? "text-stone-800"
+                    ? "text-orange-600 drop-shadow-[0_0_10px_rgba(234,88,12,0.4)]" // <-- Teks oranye pekat dengan glow oranye
                     : isDarkMode
                       ? "text-slate-100"
                       : "text-gray-900"
@@ -40,7 +54,9 @@ const QuestSection = ({
               ? "🌌 "
               : isStarforgeMode
                 ? "✨ "
-                : ""}
+                : isNotepadMode
+                  ? "📝 "
+                  : ""}
           {isMatrixMode ? "CORE_DAILY_MISSIONS" : "Daily Quests"}
         </h2>
       </div>
