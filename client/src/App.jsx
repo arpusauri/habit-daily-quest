@@ -14,6 +14,7 @@ import GachaOverlay from "./components/GachaOverlay";
 import { playSound } from "./utils/soundEngine";
 import { supabase } from "./supabaseClient";
 import AuthPage from "./AuthPage";
+import ShowcaseModal from "./components/ShowcaseModal";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -35,21 +36,19 @@ const ITEM_NAME_MAP = {
 };
 
 const POOL_ITEMS = [
-  // Standard pool items (yang bisa keluar dari Standard banner + Limited lose 50/50)
+  // Standard pool items
   { name: "Cyan Border", rarity: "R" },
   { name: "Pink Text Font", rarity: "R" },
   { name: "Obsidian Dark Theme", rarity: "SR" },
   { name: "Golden Name Tag", rarity: "SR" },
   { name: "Starforge Celestial Theme", rarity: "SSR" },
   { name: "Notepad Theme", rarity: "SSR" },
-  // Duplikat buat lebih tinggi chance munculnya di animasi (opsional)
   { name: "Cyan Border", rarity: "R" },
   { name: "Pink Text Font", rarity: "R" },
   { name: "Obsidian Dark Theme", rarity: "SR" },
   { name: "Golden Name Tag", rarity: "SR" },
 ];
 
-// Separate pool HANYA untuk animasi Limited banner (biar matrix keliatan di animasi)
 const LIMITED_POOL_ITEMS = [
   { name: "Cyan Border", rarity: "R" },
   { name: "Pink Text Font", rarity: "R" },
@@ -57,8 +56,7 @@ const LIMITED_POOL_ITEMS = [
   { name: "Golden Name Tag", rarity: "SR" },
   { name: "Starforge Celestial Theme", rarity: "SSR" },
   { name: "Notepad Theme", rarity: "SSR" },
-  { name: "Animated Cyberpunk Matrix", rarity: "SSR" }, // ← Rate-up item
-  // Duplikat
+  { name: "Animated Cyberpunk Matrix", rarity: "SSR" },
   { name: "Cyan Border", rarity: "R" },
   { name: "Pink Text Font", rarity: "R" },
   { name: "Obsidian Dark Theme", rarity: "SR" },
@@ -92,6 +90,8 @@ function App() {
   const [showBanner, setShowBanner] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [showShowcase, setShowShowcase] = useState(false);
+  const [viewingPlayer, setViewingPlayer] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -214,7 +214,7 @@ function App() {
       endpoint = "/api/gacha/pull",
       requireGems = true,
       body = {},
-      bannerType = "standard", // ← tambah default
+      bannerType = "standard",
     } = options;
 
     if (requireGems && userData.gems < 50) {
@@ -274,11 +274,9 @@ function App() {
         const isPityOrSSR = data.isPityReward || resultItem?.rarity === "SSR";
 
         if (isPityOrSSR) {
-          // Kalau pity/SSR, langsung final reveal (skip animasi alternate SR/SSR)
           setCurrentRollItem(resultDisplay);
           await sleep(400);
         } else {
-          // Kalau R/SR, baru alternate animation sebelum reveal
           for (let i = 0; i < 6; i++) {
             if (skipRef.current) break;
 
@@ -516,7 +514,6 @@ function App() {
         : "bg-slate-800 border border-slate-700 text-slate-100 hover:border-slate-600 shadow-sm";
     }
 
-    // 🖤 DEFAULT: wireframe hitam-putih minimalis
     return isCompleted
       ? "bg-gray-50 border border-gray-300 text-gray-400"
       : "bg-white border border-gray-300 text-gray-900 hover:border-gray-500 transition-colors";
@@ -529,7 +526,27 @@ function App() {
     if (isStarforgeMode) return "text-amber-100 font-bold";
     if (isNotepadMode) return "text-stone-900 font-bold";
     if (isDarkMode) return "text-slate-100 font-bold";
-    return "text-gray-900 font-bold"; // default wireframe
+    return "text-gray-900 font-bold";
+  };
+
+  // ── PREPARE SHOWCASE DATA & COSMETICS ──────────────────────────────────
+  const currentStreak =
+    habits.length > 0 ? Math.max(...habits.map((h) => h.streak || 0)) : 0;
+
+  const completedToday = habits.filter((h) => h.is_completed).length;
+
+  // SESUDAH
+  const showcaseUserData = {
+    ...userData,
+    id: userData?.id || "0000",
+    username: userData?.username || "Player",
+    streak: currentStreak,
+  };
+
+  const equippedCosmetics = {
+    theme: userData?.equipped_theme,
+    border: userData?.equipped_border,
+    title: userData?.equipped_font,
   };
 
   // ── AUTH GUARD ────────────────────────────────────────────────────────────
@@ -549,6 +566,61 @@ function App() {
 
   const skipRoll = () => {
     skipRef.current = true;
+  };
+
+  const handleViewPlayer = async (playerId) => {
+    const { data, error } = await supabase
+      .from("users")
+      .select(
+        "id, username, level, exp, created_at, last_login, equipped_theme, equipped_border, equipped_font",
+      )
+      .eq("id", playerId)
+      .single();
+    if (error || !data) return;
+
+    const [
+      { data: activityData },
+      { data: inventoryData },
+      { count: totalPulls },
+    ] = await Promise.all([
+      supabase
+        .from("daily_activity")
+        .select("completed_count")
+        .eq("user_id", playerId),
+      supabase.from("inventory").select("item_id").eq("user_id", playerId),
+      supabase
+        .from("gacha_history")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", playerId),
+    ]);
+
+    const totalQuestsCompleted = (activityData || []).reduce(
+      (sum, row) => sum + (row.completed_count || 0),
+      0,
+    );
+    const activeDays = (activityData || []).filter(
+      (row) => row.completed_count > 0,
+    ).length;
+
+    setViewingPlayer({
+      ...data,
+      totalQuestsCompleted,
+      activeDays,
+      cosmeticsCount: (inventoryData || []).length,
+      totalPulls: totalPulls || 0,
+    });
+  };
+
+  // handler buat nutup card
+  const closeViewingPlayer = () => setViewingPlayer(null);
+
+  // bentuk data biar sesuai shape yang ShowcaseModal harapin
+  const viewingPlayerData = viewingPlayer; // udah lengkap dari handleViewPlayer
+
+  const viewingPlayerCosmetics = viewingPlayer && {
+    theme: viewingPlayer.equipped_theme,
+    border: viewingPlayer.equipped_border,
+    title: viewingPlayer.equipped_font,
   };
 
   return (
@@ -577,6 +649,7 @@ function App() {
         onOpenLeaderboard={() => setShowLeaderboard(true)}
         onOpenBanner={() => setShowBanner(true)}
         onOpenShop={() => setShowShop(true)}
+        onOpenShowcase={() => setShowShowcase(true)}
       />
 
       <div className="max-w-xl mx-auto space-y-4">
@@ -584,6 +657,7 @@ function App() {
           userData={userData}
           userCardBorder={userCardBorder}
           nameTagStyle={nameTagStyle}
+          onOpenShowcase={() => setShowShowcase(true)}
           onLogout={() => supabase.auth.signOut()}
         />
 
@@ -625,10 +699,21 @@ function App() {
         />
       </div>
 
+      {/* ================= OVERLAYS & MODALS ================= */}
       <LeaderboardOverlay
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
+        onViewPlayer={handleViewPlayer} // 👈 prop yang kemarin belum ke-wire
       />
+
+      {viewingPlayer && (
+        <ShowcaseModal
+          isOpen={!!viewingPlayer}
+          onClose={closeViewingPlayer}
+          userData={viewingPlayerData}
+          equippedCosmetics={viewingPlayerCosmetics}
+        />
+      )}
 
       <BannerOverlay
         isOpen={showBanner}
@@ -656,6 +741,17 @@ function App() {
           onClose={() => setShowItemIndex(false)}
         />
       )}
+
+      <ShowcaseModal
+        isOpen={showShowcase}
+        onClose={() => setShowShowcase(false)}
+        userData={userData} // ← pastikan ini ada
+        equippedCosmetics={{
+          theme: userData?.equipped_theme,
+          border: userData?.equipped_border,
+          title: userData?.equipped_font,
+        }}
+      />
 
       <GachaOverlay
         isRolling={isRolling}

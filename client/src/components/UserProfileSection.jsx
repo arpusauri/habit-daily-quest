@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 
-const UserProfile = ({ userData, userCardBorder, nameTagStyle, onLogout }) => {
+const UserProfile = ({
+  userData,
+  userCardBorder,
+  nameTagStyle,
+  onOpenShowcase, // 🔥 Added prop for Showcase Modal
+  onLogout,
+}) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -77,7 +83,20 @@ const UserProfile = ({ userData, userCardBorder, nameTagStyle, onLogout }) => {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-36 bg-slate-950 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-10 animate-fade-in">
+            <div className="absolute right-0 top-full mt-1.5 w-40 bg-slate-950 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-10 animate-fade-in">
+              {/* 🔥 TOMBOL SHOWCASE CARD */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenShowcase && onOpenShowcase();
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-300 hover:bg-indigo-500/10 transition-colors flex items-center gap-2 border-b border-slate-800/80"
+              >
+                Player Card
+              </button>
+
+              {/* TOMBOL LOGOUT */}
               <button
                 type="button"
                 onClick={() => {
@@ -86,7 +105,7 @@ const UserProfile = ({ userData, userCardBorder, nameTagStyle, onLogout }) => {
                 }}
                 className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-2"
               >
-                🚪 Logout
+                Sign Out
               </button>
             </div>
           )}
