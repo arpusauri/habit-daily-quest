@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const { Pool } = require("pg");
 const { createClient } = require("@supabase/supabase-js"); // 1. Import Supabase SDK
 
@@ -8,7 +9,38 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ==========================================
-// 1. MIDDLEWARE CONFIGURATION
+// RATE LIMITING CONFIGURATION
+// ==========================================
+const gachaLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 menit
+  max: 50, // max 50 pulls per menit per user
+  keyGenerator: (req, res) => req.userId || req.ip, // Per user ID (setelah auth) atau IP (sebelum auth)
+  message: "Terlalu banyak pull, coba lagi nanti",
+  standardHeaders: true, // Return info di `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  skip: (req, res) => !req.userId, // Skip limit kalau belum authenticate (tapi gak akan sampai sini karena authenticateUser middleware)
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 5, // max 5 login attempts per 15 menit per IP
+  keyGenerator: (req, res) => req.ip,
+  message: "Terlalu banyak percobaan login, coba lagi nanti",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 jam
+  max: 3, // max 3 register attempts per jam per IP
+  keyGenerator: (req, res) => req.ip,
+  message: "Terlalu banyak percobaan register, coba lagi nanti",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ==========================================
+// MIDDLEWARE CONFIGURATION
 // ==========================================
 const allowedOrigins = [
   "http://localhost:5173",
@@ -62,9 +94,9 @@ const pool = new Pool({
 
 // Ambil token dengan fallback (jika pakai awalan VITE_ tetap terbaca)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Cuma dari backend .env, TIDAK dari VITE_*
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // Validasi manual sebelum crash agar ketahuan jika kosong
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -184,7 +216,7 @@ app.get("/", (req, res) => {
 // ==========================================
 
 // [POST] Register Akun Baru
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", registerLimiter, async (req, res) => {
   try {
     const { email, password, username } = req.body;
     if (!email || !password || !username) {
@@ -218,7 +250,7 @@ app.post("/api/auth/register", async (req, res) => {
 });
 
 // [POST] Login Akun
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -775,7 +807,8 @@ async function performGachaPull(userId, bannerType = "standard") {
   };
 }
 
-app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
+// ======== GACHA PULL ========
+app.post("/api/gacha/pull", authenticateUser, gachaLimiter, async (req, res) => {
   try {
     const userId = req.userId;
     const bannerType =
@@ -796,7 +829,7 @@ app.post("/api/gacha/pull", authenticateUser, async (req, res) => {
 
     const result = await performGachaPull(userId, bannerType);
 
-    // 📊 TAMBAH SINI: Insert ke gacha_history
+    // 📊 Insert ke gacha_history
     await pool.query(
       `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
        VALUES ($1, $2, $3, $4, $5)`,
@@ -921,7 +954,8 @@ app.post("/api/shop/redeem", authenticateUser, async (req, res) => {
 // [POST] Beli & langsung pakai Gacha Ticket (pakai Shards, bukan Gems)
 const TICKET_PRICE = 60;
 
-app.post("/api/shop/buy-ticket", authenticateUser, async (req, res) => {
+// ======== GACHA TICKET (SHOP) ========
+app.post("/api/shop/buy-ticket", authenticateUser, gachaLimiter, async (req, res) => {
   try {
     const userId = req.userId;
 
@@ -930,7 +964,9 @@ app.post("/api/shop/buy-ticket", authenticateUser, async (req, res) => {
       [userId],
     );
     if (userCheck.rows[0].shards < 60) {
-      return res.status(400).json({ error: "Not enough Shards!" });
+      return res
+        .status(400)
+        .json({ error: "Not enough Shards!" });
     }
 
     await pool.query("UPDATE users SET shards = shards - 60 WHERE id = $1", [
