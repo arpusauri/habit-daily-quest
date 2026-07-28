@@ -13,18 +13,15 @@ const PORT = process.env.PORT || 5000;
 // ==========================================
 const gachaLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 menit
-  max: 50, // max 50 pulls per menit per user
-  keyGenerator: (req, res) => req.userId || req.ip, // Per user ID (setelah auth) atau IP (sebelum auth)
+  max: 50, // max 50 pulls per menit
   message: "Terlalu banyak pull, coba lagi nanti",
-  standardHeaders: true, // Return info di `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  skip: (req, res) => !req.userId, // Skip limit kalau belum authenticate (tapi gak akan sampai sini karena authenticateUser middleware)
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 menit
-  max: 5, // max 5 login attempts per 15 menit per IP
-  keyGenerator: (req, res) => req.ip,
+  max: 5, // max 5 login attempts per 15 menit
   message: "Terlalu banyak percobaan login, coba lagi nanti",
   standardHeaders: true,
   legacyHeaders: false,
@@ -32,8 +29,7 @@ const authLimiter = rateLimit({
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 jam
-  max: 3, // max 3 register attempts per jam per IP
-  keyGenerator: (req, res) => req.ip,
+  max: 3, // max 3 register attempts per jam
   message: "Terlalu banyak percobaan register, coba lagi nanti",
   standardHeaders: true,
   legacyHeaders: false,
@@ -92,13 +88,12 @@ const pool = new Pool({
   },
 });
 
-// Ambil token dengan fallback (jika pakai awalan VITE_ tetap terbaca)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Cuma dari backend .env, TIDAK dari VITE_*
+const supabaseAnonKey =
+  process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-// Validasi manual sebelum crash agar ketahuan jika kosong
+// Validasi
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
     "❌ ERROR: Supabase URL atau Anon Key tidak ditemukan di file .env!",
@@ -106,7 +101,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   process.exit(1);
 }
 
-// Inisialisasi Klien Supabase Auth
+// Inisialisasi Supabase
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 pool.connect((err, client, release) => {
@@ -131,7 +126,6 @@ const authenticateUser = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    // Verifikasi token langsung ke Supabase Auth
     const {
       data: { user },
       error,
@@ -143,7 +137,6 @@ const authenticateUser = async (req, res, next) => {
         .json({ error: "Sesi kedaluwarsa atau token tidak valid." });
     }
 
-    // Cari ID integer user berdasarkan UUID Supabase Auth
     const dbUser = await pool.query(
       "SELECT id FROM users WHERE supabase_uid = $1",
       [user.id],
@@ -155,7 +148,6 @@ const authenticateUser = async (req, res, next) => {
         .json({ error: "Profil pemain tidak ditemukan di database game." });
     }
 
-    // Mengikat ID asli database ke request agar bisa dipakai oleh endpoint di bawahnya
     req.userId = dbUser.rows[0].id;
     next();
   } catch (err) {
@@ -164,7 +156,135 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-// Gacha Pool Data (Cosmetics)
+// ==========================================
+// LIMITED BANNER ROUTES
+// ==========================================
+
+// ======== GET ACTIVE LIMITED BANNER ========
+app.get("/api/banner/limited-status", async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Cari banner yang sedang aktif
+    const result = await pool.query(
+      `SELECT * FROM limited_banners 
+       WHERE is_active = true 
+       AND start_date <= $1 
+       AND end_date > $1
+       ORDER BY start_date DESC 
+       LIMIT 1`,
+      [now],
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        isActive: false,
+        currentBanner: null,
+        nextBanner: null,
+        message: "Tidak ada limited banner yang aktif saat ini",
+      });
+    }
+
+    const banner = result.rows[0];
+    const timeRemaining = new Date(banner.end_date) - now;
+    const daysRemaining = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+    const hoursRemaining = Math.ceil((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+    // Cari banner berikutnya
+    const nextResult = await pool.query(
+      `SELECT * FROM limited_banners 
+       WHERE is_active = true 
+       AND start_date > $1
+       ORDER BY start_date ASC 
+       LIMIT 1`,
+      [now],
+    );
+
+    const nextBanner = nextResult.rows[0] || null;
+
+    res.json({
+      isActive: true,
+      currentBanner: {
+        id: banner.id,
+        name: banner.name,
+        rateUpItem: banner.rate_up_item_id,
+        startDate: banner.start_date,
+        endDate: banner.end_date,
+        daysRemaining,
+        hoursRemaining,
+        timeRemaining,
+      },
+      nextBanner: nextBanner ? {
+        id: nextBanner.id,
+        name: nextBanner.name,
+        startDate: nextBanner.start_date,
+      } : null,
+    });
+  } catch (err) {
+    console.error("Banner status error:", err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ======== CREATE NEW LIMITED BANNER (ADMIN) ========
+app.post("/api/admin/banner/create", authenticateUser, async (req, res) => {
+  try {
+    const { name, rateUpItemId, startDate, durationDays } = req.body;
+
+    // Optional: Validasi admin role (kalau ada)
+    // const adminCheck = await pool.query(
+    //   "SELECT role FROM users WHERE id = $1",
+    //   [req.userId],
+    // );
+    // if (adminCheck.rows[0]?.role !== "admin") {
+    //   return res.status(403).json({ error: "Unauthorized: Admin only" });
+    // }
+
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(startDateObj);
+    endDateObj.setDate(endDateObj.getDate() + durationDays);
+
+    const result = await pool.query(
+      `INSERT INTO limited_banners (name, rate_up_item_id, start_date, end_date, is_active)
+       VALUES ($1, $2, $3, $4, true)
+       RETURNING *`,
+      [name, rateUpItemId, startDateObj, endDateObj],
+    );
+
+    res.json({
+      message: "Banner created successfully",
+      banner: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Create banner error:", err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ======== LIST ALL BANNERS (ADMIN) ========
+app.get("/api/admin/banners", authenticateUser, async (req, res) => {
+  try {
+    // Optional: Validasi admin role
+    // const adminCheck = await pool.query(
+    //   "SELECT role FROM users WHERE id = $1",
+    //   [req.userId],
+    // );
+    // if (adminCheck.rows[0]?.role !== "admin") {
+    //   return res.status(403).json({ error: "Unauthorized: Admin only" });
+    // }
+
+    const result = await pool.query(
+      `SELECT * FROM limited_banners 
+       ORDER BY start_date DESC`,
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("List banners error:", err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Gacha Pool Data (Cosmetics)
 const COSMETIC_POOL = [
   { id: "r_blue", name: "🔵 Cyan Border", rarity: "R", chance: 0.7 },
@@ -250,7 +370,7 @@ app.post("/api/auth/register", registerLimiter, async (req, res) => {
 });
 
 // [POST] Login Akun
-app.post("/api/auth/login", loginLimiter, async (req, res) => {
+app.post("/api/auth/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -808,46 +928,52 @@ async function performGachaPull(userId, bannerType = "standard") {
 }
 
 // ======== GACHA PULL ========
-app.post("/api/gacha/pull", authenticateUser, gachaLimiter, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const bannerType =
-      req.body?.bannerType === "limited" ? "limited" : "standard";
+app.post(
+  "/api/gacha/pull",
+  authenticateUser,
+  gachaLimiter,
+  async (req, res) => {
+    try {
+      const userId = req.userId;
+      const bannerType =
+        req.body?.bannerType === "limited" ? "limited" : "standard";
 
-    const userCheck = await pool.query("SELECT gems FROM users WHERE id = $1", [
-      userId,
-    ]);
-    if (userCheck.rows[0].gems < 50) {
-      return res
-        .status(400)
-        .json({ error: "Not enough gems! Go do your habits! 😤" });
-    }
+      const userCheck = await pool.query(
+        "SELECT gems FROM users WHERE id = $1",
+        [userId],
+      );
+      if (userCheck.rows[0].gems < 50) {
+        return res
+          .status(400)
+          .json({ error: "Not enough gems! Go do your habits! 😤" });
+      }
 
-    await pool.query("UPDATE users SET gems = gems - 50 WHERE id = $1", [
-      userId,
-    ]);
-
-    const result = await performGachaPull(userId, bannerType);
-
-    // 📊 Insert ke gacha_history
-    await pool.query(
-      `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
+      await pool.query("UPDATE users SET gems = gems - 50 WHERE id = $1", [
         userId,
-        result.pulledItem.id,
-        result.pulledItem.name,
-        result.pulledItem.rarity,
-        bannerType,
-      ],
-    );
+      ]);
 
-    res.json(result);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+      const result = await performGachaPull(userId, bannerType);
+
+      // 📊 Insert ke gacha_history
+      await pool.query(
+        `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
+       VALUES ($1, $2, $3, $4, $5)`,
+        [
+          userId,
+          result.pulledItem.id,
+          result.pulledItem.name,
+          result.pulledItem.rarity,
+          bannerType,
+        ],
+      );
+
+      res.json(result);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
 
 // [GET] Ambil daftar item Shop (kosmetik yang BELUM dimiliki user)
 app.get("/api/shop/items", authenticateUser, async (req, res) => {
@@ -955,45 +1081,48 @@ app.post("/api/shop/redeem", authenticateUser, async (req, res) => {
 const TICKET_PRICE = 60;
 
 // ======== GACHA TICKET (SHOP) ========
-app.post("/api/shop/buy-ticket", authenticateUser, gachaLimiter, async (req, res) => {
-  try {
-    const userId = req.userId;
+app.post(
+  "/api/shop/buy-ticket",
+  authenticateUser,
+  gachaLimiter,
+  async (req, res) => {
+    try {
+      const userId = req.userId;
 
-    const userCheck = await pool.query(
-      "SELECT shards FROM users WHERE id = $1",
-      [userId],
-    );
-    if (userCheck.rows[0].shards < 60) {
-      return res
-        .status(400)
-        .json({ error: "Not enough Shards!" });
-    }
+      const userCheck = await pool.query(
+        "SELECT shards FROM users WHERE id = $1",
+        [userId],
+      );
+      if (userCheck.rows[0].shards < 60) {
+        return res.status(400).json({ error: "Not enough Shards!" });
+      }
 
-    await pool.query("UPDATE users SET shards = shards - 60 WHERE id = $1", [
-      userId,
-    ]);
-
-    const result = await performGachaPull(userId, "standard");
-
-    // 📊 Insert gacha history
-    await pool.query(
-      `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
+      await pool.query("UPDATE users SET shards = shards - 60 WHERE id = $1", [
         userId,
-        result.pulledItem.id,
-        result.pulledItem.name,
-        result.pulledItem.rarity,
-        "ticket",
-      ],
-    );
+      ]);
 
-    res.json(result);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Server error" });
-  }
-});
+      const result = await performGachaPull(userId, "standard");
+
+      // 📊 Insert gacha history
+      await pool.query(
+        `INSERT INTO gacha_history (user_id, item_id, item_name, rarity, banner_type)
+       VALUES ($1, $2, $3, $4, $5)`,
+        [
+          userId,
+          result.pulledItem.id,
+          result.pulledItem.name,
+          result.pulledItem.rarity,
+          "ticket",
+        ],
+      );
+
+      res.json(result);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
 
 // [POST] Beli Streak Shield pakai Shards
 const SHIELD_PRICE = 120;
