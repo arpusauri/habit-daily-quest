@@ -721,6 +721,7 @@ function App() {
         rollGacha={rollGacha}
         isRolling={isRolling}
         userData={userData}
+        apiUrl={API_URL} 
       />
 
       <ShopOverlay

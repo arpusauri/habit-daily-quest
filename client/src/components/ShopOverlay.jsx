@@ -127,48 +127,49 @@ function ShopOverlay({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white font-bold text-xl p-2 rounded-lg hover:bg-slate-800"
-          >
-            ✕
-          </button>
-        </div>
 
-        {/* Shards Balance */}
-        <div className="flex items-center justify-center gap-2 mb-4 bg-slate-800/60 border border-slate-700 rounded-xl py-2">
-          <span className="text-lg">💠</span>
-          <span className="font-black text-lg text-cyan-300">{shards}</span>
-          <span className="text-xs text-gray-400">Shards</span>
-          {shieldOwned > 0 && (
-            <span className="ml-2 flex items-center gap-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
-              🛡️ {shieldOwned}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-800/60 border border-slate-700 rounded-full px-3 py-1.5">
+              <span className="text-xs">💠</span>
+              <span className="font-black text-xs text-cyan-300">{shards}</span>
+              {shieldOwned > 0 && (
+                <span className="flex items-center gap-0.5 pl-1.5 ml-0.5 border-l border-slate-700 text-cyan-400 text-[10px] font-bold">
+                  🛡️ {shieldOwned}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-white font-bold text-xl p-2 rounded-lg hover:bg-slate-800"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs font-medium mb-4 self-center">
+        <div className="flex bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 text-xs font-black mb-4">
           <button
             onClick={() => setActiveTab("cosmetics")}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
+            className={`flex-1 py-2.5 rounded-lg transition-all ${
               activeTab === "cosmetics"
-                ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
+                ? "bg-emerald-500 text-slate-950 shadow-md"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            🎨 Cosmetics
+            Cosmetics
           </button>
           <button
             onClick={() => setActiveTab("boosters")}
-            className={`px-4 py-1.5 rounded-lg transition-all ${
+            className={`flex-1 py-2.5 rounded-lg transition-all ${
               activeTab === "boosters"
-                ? "bg-emerald-500 text-slate-950 font-bold shadow-md"
+                ? "bg-emerald-500 text-slate-950 shadow-md"
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            🎒 Boosters
+            Boosters
           </button>
         </div>
 

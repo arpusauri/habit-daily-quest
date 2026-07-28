@@ -45,13 +45,6 @@ const MASTER_ITEMS = [
     desc: "Langit malam berbintang bertabur cahaya emas.",
   },
   {
-    id: "ssr_notepad",
-    name: "Notepad Theme",
-    rarity: "SSR",
-    category: "THEMES",
-    desc: "Tema gaya buku catatan klasik dengan aksen coretan oranye.",
-  },
-  {
     id: "shop_aurora",
     name: "Aurora Dream Theme",
     rarity: "SR",
@@ -76,10 +69,11 @@ const CATEGORIES = [
   { id: "TITLES", label: "🏷️ Titles & Fonts" },
 ];
 
-const RARITY_WEIGHT = {
-  SSR: 3,
+// 1. Tambahkan hirarki/urutan Rarity di sini
+const RARITY_ORDER = {
+  SSR: 1,
   SR: 2,
-  R: 1,
+  R: 3,
 };
 
 const ItemIndex = ({ userData, onClose }) => {
@@ -94,11 +88,15 @@ const ItemIndex = ({ userData, onClose }) => {
 
   const ownedCount = MASTER_ITEMS.filter((i) => checkIsOwned(i.id)).length;
 
-  const visibleItems = (
+  // 2. Filter item lalu urutkan berdasarkan RARITY_ORDER (SSR -> SR -> R)
+  const filteredItems =
     activeCategory === "ALL"
       ? MASTER_ITEMS
-      : MASTER_ITEMS.filter((i) => i.category === activeCategory)
-  ).sort((a, b) => RARITY_WEIGHT[b.rarity] - RARITY_WEIGHT[a.rarity]);
+      : MASTER_ITEMS.filter((i) => i.category === activeCategory);
+
+  const visibleItems = [...filteredItems].sort(
+    (a, b) => (RARITY_ORDER[a.rarity] || 99) - (RARITY_ORDER[b.rarity] || 99),
+  );
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -129,7 +127,7 @@ const ItemIndex = ({ userData, onClose }) => {
               key={cat.id}
               type="button"
               onClick={() => setActiveCategory(cat.id)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+              className={`shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
                 activeCategory === cat.id
                   ? "bg-indigo-600 text-white shadow-md"
                   : "text-slate-400 hover:text-white hover:bg-slate-800"
@@ -153,7 +151,7 @@ const ItemIndex = ({ userData, onClose }) => {
                 ? "text-purple-400 border-purple-500/50 bg-purple-500/10"
                 : "",
               R: isOwned
-                ? "text-green-400 border-green-500/50 bg-green-500/10"
+                ? "text-blue-400 border-blue-500/50 bg-blue-500/10"
                 : "",
             };
 
@@ -167,7 +165,7 @@ const ItemIndex = ({ userData, onClose }) => {
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5">
                     <span
                       className={`text-[10px] font-black px-2 py-0.5 rounded ${
                         isOwned
@@ -177,31 +175,17 @@ const ItemIndex = ({ userData, onClose }) => {
                     >
                       {item.rarity}
                     </span>
-
-                    {/* Badge LIMITED - Sekarang warna Biru */}
                     {item.limited && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30">
                         LIMITED
                       </span>
                     )}
-
-                    {/* Badge SHOP EXCLUSIVE */}
                     {item.shopOnly && (
                       <span className="text-[9px] font-black px-2 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30">
                         SHOP EXCLUSIVE
                       </span>
                     )}
-
-                    {/* Badge STANDARD Khusus SSR - Sekarang warna Oranye */}
-                    {item.rarity === "SSR" &&
-                      !item.limited &&
-                      !item.shopOnly && (
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/30">
-                          STANDARD
-                        </span>
-                      )}
                   </div>
-
                   {!isOwned ? (
                     <span className="text-slate-500 text-xs font-semibold shrink-0">
                       🔒 Locked
