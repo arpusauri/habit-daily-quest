@@ -209,6 +209,12 @@ function App() {
       });
   };
 
+  const handleReorderHabits = (reorderedHabits) => {
+    setHabits(reorderedHabits);
+    // Optional: save ke database
+    // await updateHabitsOrder(reorderedHabits);
+  };
+
   const rollGacha = async (options = {}) => {
     const {
       endpoint = "/api/gacha/pull",
@@ -673,8 +679,7 @@ function App() {
           isAuroraMode={isAuroraMode}
           isStarforgeMode={isStarforgeMode}
           isNotepadMode={isNotepadMode}
-          questCardStyle={questCardStyle}
-          questTitleStyle={questTitleStyle}
+          onReorderHabits={handleReorderHabits}
         />
 
         <HabitHeatmap
@@ -721,7 +726,7 @@ function App() {
         rollGacha={rollGacha}
         isRolling={isRolling}
         userData={userData}
-        apiUrl={API_URL} 
+        apiUrl={API_URL}
       />
 
       <ShopOverlay
