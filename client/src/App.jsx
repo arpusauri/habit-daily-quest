@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import UserProfile from "./components/UserProfileSection";
 import QuestSection from "./components/QuestSection";
@@ -863,6 +864,7 @@ function App() {
         skipRoll={skipRoll}
       />
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
