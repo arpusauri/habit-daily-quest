@@ -65,7 +65,7 @@ const QuestSection = ({
     <div className="w-full">
       {/* Section Header */}
       <div className="text-left mt-8 mb-4 border-b border-gray-300 pb-2">
-        <h2 className="text-2xl font-black text-gray-900">📋 Daily Quests</h2>
+        <h2 className="text-2xl font-black text-gray-900">Daily Quests</h2>
       </div>
 
       {/* Background Container */}
@@ -144,11 +144,11 @@ const QuestSection = ({
                       onClick={() => completeHabit(habit.id)}
                       className="px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all shadow-sm text-sm"
                     >
-                      +30 Gems
+                      Complete
                     </button>
                   ) : (
                     <span className="px-4 py-2 font-semibold text-green-700 bg-green-100 border border-green-300 text-sm">
-                      Cleared! ✓
+                      Cleared!
                     </span>
                   )}
 
@@ -158,7 +158,7 @@ const QuestSection = ({
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                     title="Delete Quest"
                   >
-                    🗑️
+                    X
                   </button>
                 </div>
               </div>

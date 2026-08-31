@@ -53,7 +53,7 @@ const Inventory = ({
                         : "text-gray-900"
             }`}
           >
-            🎒 {isMatrixMode ? "INVENTORY_CACHE" : "Inventory"} (
+            {isMatrixMode ? "INVENTORY_CACHE" : "Inventory"} (
             {userInventory.length})
           </h2>
           <button
