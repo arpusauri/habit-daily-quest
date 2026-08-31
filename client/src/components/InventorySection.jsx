@@ -53,7 +53,7 @@ const Inventory = ({
                         : "text-gray-900"
             }`}
           >
-            🎒 {isMatrixMode ? "INVENTORY_CACHE" : "Inventory"} (
+            {isMatrixMode ? "INVENTORY_CACHE" : "Inventory"} (
             {userInventory.length})
           </h2>
           <button
@@ -73,7 +73,7 @@ const Inventory = ({
                         : "border border-gray-900 text-gray-900 bg-white hover:bg-gray-900 hover:text-white"
             }`}
           >
-            📚 Collection Book
+            Item Index
           </button>
         </div>
 

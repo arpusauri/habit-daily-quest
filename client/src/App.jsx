@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 
 import UserProfile from "./components/UserProfileSection";
 import QuestSection from "./components/QuestSection";
@@ -13,8 +13,10 @@ import HabitHeatmap from "./components/HabitHeatmap";
 import GachaOverlay from "./components/GachaOverlay";
 import { playSound } from "./utils/soundEngine";
 import { supabase } from "./supabaseClient";
-import AuthPage from "./AuthPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import ShowcaseModal from "./components/ShowcaseModal";
+import NotificationOverlay from "./components/NotificationOverlay";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -64,6 +66,49 @@ const LIMITED_POOL_ITEMS = [
 ];
 
 function App() {
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = useCallback(
+    (title, message, type = "success", duration = 3000) => {
+      const id = Date.now();
+      const notification = { id, title, message, type };
+      setNotifications((prev) => [...prev, notification]);
+      if (duration > 0) {
+        setTimeout(() => {
+          setNotifications((prev) => prev.filter((n) => n.id !== id));
+        }, duration);
+      }
+      return id;
+    },
+    [],
+  );
+
+  const showSuccess = useCallback(
+    (title, message, duration = 3000) => {
+      return addNotification(title, message, "success", duration);
+    },
+    [addNotification],
+  );
+
+  const showWarning = useCallback(
+    (title, message, duration = 3000) => {
+      return addNotification(title, message, "warning", duration);
+    },
+    [addNotification],
+  );
+
+  const showLevelUp = useCallback(
+    (level) => {
+      return addNotification(
+        "Level Up!",
+        `You reached level ${level}!`,
+        "levelup",
+        3000,
+      );
+    },
+    [addNotification],
+  );
+
   const [userData, setUserData] = useState({
     username: "",
     gems: 0,
@@ -81,6 +126,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activityTrigger, setActivityTrigger] = useState(0);
+  const [showLogin, setShowLogin] = useState(true); // Default show login
 
   const rollIntervalRef = useRef(null);
   const rollTimeoutRef = useRef(null);
@@ -136,7 +182,7 @@ function App() {
 
   const completeHabit = (habitId) => {
     if (typeof habitId === "string" && habitId.startsWith("temp_")) {
-      alert("Sabar ya, quest ini sedang disimpan ke server...");
+      showWarning("Saving", "Quest sedang disimpan ke server...", 2000);
       return;
     }
 
@@ -179,11 +225,18 @@ function App() {
 
     if (levelUp) setTimeout(() => playSound("level_up"), 100);
 
+    // Show notification dengan gems dan exp
+    const notificationMessage = levelUp
+      ? `+${earnedGems} Gems, +${earnedExp} XP, Level Up!`
+      : `+${earnedGems} Gems, +${earnedExp} XP`;
+
+    showSuccess("Quest Complete!", notificationMessage, 3000);
+
     authFetch(`${API_URL}/api/habits/${habitId}/complete`, { method: "POST" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
-          alert(data.error);
+          showWarning("Error", data.error, 3000);
           authFetch(`${API_URL}/api/dashboard`)
             .then((r) => r.json())
             .then((d) => {
@@ -197,9 +250,15 @@ function App() {
 
         if (data.user.level > oldLevel) {
           setTimeout(() => playSound("level_up"), 100);
+          showSuccess(
+            "Level Up!",
+            `You reached level ${data.user.level}!`,
+            3000,
+          );
         }
       })
       .catch(() => {
+        showWarning("Error", "Failed to complete quest", 2000);
         authFetch(`${API_URL}/api/dashboard`)
           .then((r) => r.json())
           .then((d) => {
@@ -207,6 +266,22 @@ function App() {
             setHabits(d.habits);
           });
       });
+  };
+
+  // const handleReorderHabits = (reorderedHabits) => {
+  //   setHabits(reorderedHabits);
+  // Optional: save ke database
+  // authFetch(`${API_URL}/api/habits/reorder`, {
+  //   method: "POST",
+  //   headers: { "Content-Type": "application/json" },
+  //   body: JSON.stringify({ habits: reorderedHabits }),
+  // });
+  // };
+
+  const handleReorderHabits = (reorderedHabits) => {
+    setHabits(reorderedHabits);
+    // Optional: save ke database
+    // await updateHabitsOrder(reorderedHabits);
   };
 
   const rollGacha = async (options = {}) => {
@@ -557,7 +632,29 @@ function App() {
       </div>
     );
 
-  if (!session) return <AuthPage onLogin={setSession} apiUrl={API_URL} />;
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    return (
+      <>
+        {showLogin ? (
+          <LoginPage
+            onLogin={(session) => setSession(session)}
+            apiUrl={API_URL}
+            onSwitchToRegister={() => setShowLogin(false)}
+          />
+        ) : (
+          <RegisterPage
+            onLogin={(session) => setSession(session)}
+            apiUrl={API_URL}
+            onSwitchToLogin={() => setShowLogin(true)}
+          />
+        )}
+      </>
+    );
+  }
 
   const closeGachaOverlay = () => {
     setGachaResult(null);
@@ -673,8 +770,7 @@ function App() {
           isAuroraMode={isAuroraMode}
           isStarforgeMode={isStarforgeMode}
           isNotepadMode={isNotepadMode}
-          questCardStyle={questCardStyle}
-          questTitleStyle={questTitleStyle}
+          onReorderHabits={handleReorderHabits}
         />
 
         <HabitHeatmap
@@ -706,6 +802,8 @@ function App() {
         onViewPlayer={handleViewPlayer} // 👈 prop yang kemarin belum ke-wire
       />
 
+      <NotificationOverlay notifications={notifications} />
+
       {viewingPlayer && (
         <ShowcaseModal
           isOpen={!!viewingPlayer}
@@ -721,7 +819,7 @@ function App() {
         rollGacha={rollGacha}
         isRolling={isRolling}
         userData={userData}
-        apiUrl={API_URL} 
+        apiUrl={API_URL}
       />
 
       <ShopOverlay

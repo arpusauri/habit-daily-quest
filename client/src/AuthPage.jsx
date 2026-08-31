@@ -60,55 +60,20 @@ export default function AuthPage({ onLogin, apiUrl }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 w-full max-w-sm shadow-xl">
+    <div className="min-h-screen bg-[#51b330] flex items-center justify-center px-4">
+      <div className="bg-white rounded p-8 w-full max-w-sm shadow-xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-black text-white tracking-wide">
-            ⚔️ HABIT QUEST
+          <h1 className="text-2xl font-bold text-[#1e720f] tracking-wide">
+            Gambit
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {isLogin ? "Login to continue your journey" : "Create your account"}
-          </p>
-        </div>
-
-        {/* Tab Switch */}
-        <div className="flex bg-gray-800 rounded-xl p-1 mb-6">
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(true);
-              setError("");
-            }}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-              isLogin
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(false);
-              setError("");
-            }}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-              !isLogin
-                ? "bg-indigo-600 text-white"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Register
-          </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">
+              <label className="text-xs font-bold text[	#0a500a] uppercase tracking-widest mb-1 block">
                 Username
               </label>
               <input
@@ -123,7 +88,7 @@ export default function AuthPage({ onLogin, apiUrl }) {
           )}
 
           <div>
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">
+            <label className="text-xs font-bold text-[#0a500a] uppercase tracking-widest mb-1 block">
               Email
             </label>
             <input
@@ -132,12 +97,12 @@ export default function AuthPage({ onLogin, apiUrl }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
               required
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 bg-white border border-gray-700 rounded-sm text-gray-900 text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 block">
+            <label className="text-xs font-bold text-[#0a500a] uppercase tracking-widest mb-1 block">
               Password
             </label>
             <input
@@ -146,7 +111,7 @@ export default function AuthPage({ onLogin, apiUrl }) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 bg-white border border-gray-700 rounded-sm text-gray-900 text-sm focus:outline-none focus:border-indigo-500"
             />
           </div>
 
@@ -165,13 +130,9 @@ export default function AuthPage({ onLogin, apiUrl }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full py-2.5 bg-[#7ad950] hover:bg-[	#0a500a] text-white font-black rounded-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            {loading
-              ? "Loading..."
-              : isLogin
-                ? "⚔️ Enter the Quest"
-                : "🚀 Create Account"}
+            {loading ? "Loading..." : isLogin ? "Log In" : "Create Account"}
           </button>
         </form>
       </div>
