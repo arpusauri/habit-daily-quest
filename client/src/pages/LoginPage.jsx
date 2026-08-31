@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { supabase } from "../supabaseClient";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
   const [identifier, setIdentifier] = useState("");
@@ -14,15 +17,32 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
     setError("");
 
     try {
-      const res = await fetch(`${apiUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-      });
-      const data = await res.json();
+      const trimmedIdentifier = identifier.trim();
+      let emailToUse = trimmedIdentifier;
 
-      if (!res.ok) {
-        throw new Error(data.error || "Login gagal.");
+      // Kalau input BUKAN format email, anggap itu username -> lookup email-nya dulu
+      if (!EMAIL_REGEX.test(trimmedIdentifier)) {
+        const res = await fetch(
+          `${apiUrl}/api/auth/lookup-email?username=${encodeURIComponent(trimmedIdentifier)}`,
+        );
+        const lookupData = await res.json();
+
+        if (!res.ok) {
+          // Samain pesan errornya sama kayak wrong password,
+          // biar gak jadi celah buat nebak-nebak username yang valid
+          throw new Error("Email/Username atau password salah.");
+        }
+
+        emailToUse = lookupData.email;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailToUse,
+        password,
+      });
+
+      if (error) {
+        throw new Error("Email/Username atau password salah.");
       }
 
       onLogin(data.session);
