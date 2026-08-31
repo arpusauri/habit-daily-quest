@@ -13,7 +13,8 @@ import HabitHeatmap from "./components/HabitHeatmap";
 import GachaOverlay from "./components/GachaOverlay";
 import { playSound } from "./utils/soundEngine";
 import { supabase } from "./supabaseClient";
-import AuthPage from "./AuthPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import ShowcaseModal from "./components/ShowcaseModal";
 import NotificationOverlay from "./components/NotificationOverlay";
 
@@ -125,6 +126,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activityTrigger, setActivityTrigger] = useState(0);
+  const [showLogin, setShowLogin] = useState(true); // Default show login
 
   const rollIntervalRef = useRef(null);
   const rollTimeoutRef = useRef(null);
@@ -630,7 +632,29 @@ function App() {
       </div>
     );
 
-  if (!session) return <AuthPage onLogin={setSession} apiUrl={API_URL} />;
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!session) {
+    return (
+      <>
+        {showLogin ? (
+          <LoginPage
+            onLogin={(session) => setSession(session)}
+            apiUrl={API_URL}
+            onSwitchToRegister={() => setShowLogin(false)}
+          />
+        ) : (
+          <RegisterPage
+            onLogin={(session) => setSession(session)}
+            apiUrl={API_URL}
+            onSwitchToLogin={() => setShowLogin(true)}
+          />
+        )}
+      </>
+    );
+  }
 
   const closeGachaOverlay = () => {
     setGachaResult(null);
