@@ -345,42 +345,38 @@ app.get("/", (req, res) => {
 // 4. AUTH ROUTES (Register & Login)
 // ==========================================
 
-// [GET] Cek ketersediaan username secara real-time
 // [GET] Lookup email berdasarkan username (untuk login)
 app.get("/api/auth/lookup-email", async (req, res) => {
   try {
     const { username } = req.query;
- 
+    
     if (!username || !username.trim()) {
       return res.status(400).json({ error: "Username wajib diisi!" });
     }
  
     const trimmedUsername = username.trim();
- 
+    
     // Ambil supabase_uid dari tabel users berdasarkan username
     const result = await pool.query(
       `SELECT supabase_uid FROM "users" WHERE username = $1 LIMIT 1`,
       [trimmedUsername],
     );
- 
+    
     if (result.rows.length === 0) {
-      // Jangan kasih tau spesifik "username gak ada" biar gak jadi celah
-      // buat enumerate username yang valid - biarin Supabase Auth yang
-      // nolak pas signInWithPassword dengan email palsu
       return res.status(404).json({ error: "User tidak ditemukan." });
     }
- 
+    
     const supabaseUid = result.rows[0].supabase_uid;
- 
+    
     // Ambil email dari Supabase Auth pakai admin client (service role)
     const { data, error } = await supabaseAdmin.auth.admin.getUserById(
       supabaseUid,
     );
- 
+    
     if (error || !data?.user?.email) {
       return res.status(404).json({ error: "User tidak ditemukan." });
     }
- 
+    
     res.json({ email: data.user.email });
   } catch (err) {
     console.error("Lookup Email Error:", err.message);
@@ -388,10 +384,11 @@ app.get("/api/auth/lookup-email", async (req, res) => {
   }
 });
 
+// [GET] Cek ketersediaan username secara real-time
 app.get("/api/auth/check-username", async (req, res) => {
   try {
     const { username } = req.query;
- 
+    
     if (!username || !username.trim()) {
       return res.status(400).json({ error: "Username wajib diisi!" });
     }
