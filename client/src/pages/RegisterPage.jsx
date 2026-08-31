@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -11,8 +11,11 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Username availability check states
+  const [usernameStatus, setUsernameStatus] = useState("idle"); // idle | checking | available | taken
+  const debounceRef = useRef(null);
+
   // Validation
-  const isUsernameValid = username.trim().length > 0;
   const isEmailValid = EMAIL_REGEX.test(email.trim());
 
   const passwordRequirements = {
@@ -20,12 +23,49 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
   };
 
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
+  const isUsernameValid =
+    username.trim().length > 0 && usernameStatus === "available";
+
   const isFormValid =
     isUsernameValid &&
     email.trim() &&
     isEmailValid &&
     password.trim() &&
     isPasswordValid;
+
+  // Real-time username check dengan debounce
+  useEffect(() => {
+    if (!username.trim()) {
+      setUsernameStatus("idle");
+      return;
+    }
+
+    setUsernameStatus("checking");
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${apiUrl}/api/auth/check-username?username=${encodeURIComponent(username.trim())}`,
+        );
+        const data = await res.json();
+
+        if (data.available) {
+          setUsernameStatus("available");
+        } else {
+          setUsernameStatus("taken");
+        }
+      } catch (err) {
+        console.error("Error checking username:", err);
+        setUsernameStatus("idle");
+      }
+    }, 500); // tunggu 500ms setelah user berhenti ngetik
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [username, apiUrl]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,6 +94,13 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
       return;
     }
 
+    // Validate username availability
+    if (usernameStatus !== "available") {
+      setError("Username tidak tersedia!");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: "POST",
@@ -66,6 +113,12 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
       const data = await response.json();
 
       if (!response.ok) {
+        // Fallback kalau race condition (username diambil orang lain pas mau submit)
+        if (data.error === "Username sudah dipakai!") {
+          setUsernameStatus("taken");
+          setLoading(false);
+          return;
+        }
         throw new Error(data.error || "Registrasi gagal dilakukan.");
       }
 
@@ -114,19 +167,39 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
                 placeholder="e.g., GambitHero"
                 required
                 className={`w-full px-4 py-2.5 pr-10 bg-white border-2 rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 ${
-                  username
-                    ? isUsernameValid
-                      ? "border-green-600 focus:ring-green-500"
-                      : "border-red-600 focus:ring-red-500"
-                    : "border-[#1e720f] focus:ring-[#053b05]"
+                  usernameStatus === "available"
+                    ? "border-green-600 focus:ring-green-500"
+                    : usernameStatus === "taken"
+                      ? "border-red-600 focus:ring-red-500"
+                      : "border-[#1e720f] focus:ring-[#053b05]"
                 }`}
               />
-              {isUsernameValid && (
+              {usernameStatus === "checking" && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm animate-pulse">
+                  ...
+                </span>
+              )}
+              {usernameStatus === "available" && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 font-bold text-sm">
                   ✓
                 </span>
               )}
+              {usernameStatus === "taken" && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-600 font-bold text-sm">
+                  ✗
+                </span>
+              )}
             </div>
+            {usernameStatus === "taken" && (
+              <p className="mt-2 text-xs text-red-600 font-semibold">
+                Username sudah dipakai
+              </p>
+            )}
+            {usernameStatus === "available" && (
+              <p className="mt-2 text-xs text-green-600 font-semibold">
+                Username tersedia
+              </p>
+            )}
           </div>
 
           <div>
@@ -187,7 +260,6 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
               )}
             </div>
 
-            {/* Password Requirements — cuma muncul selama BELUM terpenuhi */}
             {password && !passwordRequirements.minLength && (
               <p className="mt-3 text-xs text-red-600 font-semibold">
                 Minimal 8 karakter

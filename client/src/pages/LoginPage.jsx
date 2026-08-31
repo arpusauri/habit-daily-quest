@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { supabase } from "../supabaseClient";
 
 export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const isFormValid = identifier.trim() && password.trim();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -13,11 +14,17 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
     setError("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
       });
-      if (error) throw error;
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Login gagal.");
+      }
+
       onLogin(data.session);
     } catch (err) {
       setError(err.message);
@@ -44,15 +51,15 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs font-bold text-[#0a500a] uppercase tracking-widest mb-2 block">
-              Email
+              Email/Username
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Masukkan Email"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Username atau email (case sensitive)"
               required
-              className="w-full px-4 py-2.5 bg-white border-2 border-[#1e720f] rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[	#053b05]"
+              className="w-full px-4 py-2.5 bg-white border-2 border-[#1e720f] rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#053b05]"
             />
           </div>
 
@@ -64,9 +71,9 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Masukkan Password"
+              placeholder="Password"
               required
-              className="w-full px-4 py-2.5 bg-white border-2 border-[#1e720f] rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[	#053b05]"
+              className="w-full px-4 py-2.5 bg-white border-2 border-[#1e720f] rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#053b05]"
             />
           </div>
 
@@ -78,8 +85,12 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-[#51b330] hover:bg-[#409228] text-white font-black rounded-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+            disabled={loading || !isFormValid}
+            className={`w-full py-2.5 font-black rounded-sm transition-all mt-4 ${
+              loading || !isFormValid
+                ? "bg-gray-400 text-white opacity-50 cursor-not-allowed pointer-events-none"
+                : "bg-[#51b330] hover:bg-[#409228] text-white active:scale-95"
+            }`}
           >
             {loading ? "Loading..." : "Log In"}
           </button>
@@ -90,8 +101,8 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
           <p className="text-sm text-gray-600">
             <button
               onClick={onSwitchToRegister}
-              className="text-[	#0a500a] hover:underline"
-              >
+              className="text-[#0a500a] hover:underline"
+            >
               Don't have an account yet?{" "}
               <span className="font-bold">Register.</span>
             </button>

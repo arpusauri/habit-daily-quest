@@ -14,25 +14,35 @@ const PORT = process.env.PORT || 5000;
 const gachaLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 menit
   max: 50, // max 50 pulls per menit
-  message: "Terlalu banyak pull, coba lagi nanti",
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({ error: "Terlalu banyak pull, coba lagi nanti" });
+  },
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 menit
   max: 5, // max 5 login attempts per 15 menit
-  message: "Terlalu banyak percobaan login, coba lagi nanti",
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      error: "Terlalu banyak percobaan login, coba lagi nanti",
+    });
+  },
 });
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 jam
   max: 3, // max 3 register attempts per jam
-  message: "Terlalu banyak percobaan register, coba lagi nanti",
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      error: "Terlalu banyak percobaan register, coba lagi nanti",
+    });
+  },
 });
 
 // ==========================================
@@ -101,8 +111,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   process.exit(1);
 }
 
-// Inisialisasi Supabase
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey); 
 
 pool.connect((err, client, release) => {
   if (err) {
@@ -335,6 +345,31 @@ app.get("/", (req, res) => {
 // 4. AUTH ROUTES (Register & Login)
 // ==========================================
 
+// [GET] Cek ketersediaan username secara real-time
+app.get("/api/auth/check-username", async (req, res) => {
+  try {
+    const { username } = req.query;
+ 
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: "Username wajib diisi!" });
+    }
+ 
+    const trimmedUsername = username.trim();
+ 
+    const result = await pool.query(
+      `SELECT id FROM "users" WHERE username = $1 LIMIT 1`,
+      [trimmedUsername],
+    );
+ 
+    const isAvailable = result.rows.length === 0;
+ 
+    res.json({ available: isAvailable });
+  } catch (err) {
+    console.error("Check Username Error:", err.message);
+    res.status(500).json({ error: "Gagal cek username." });
+  }
+});
+
 // [POST] Register Akun Baru
 app.post("/api/auth/register", registerLimiter, async (req, res) => {
   try {
@@ -352,11 +387,26 @@ app.post("/api/auth/register", registerLimiter, async (req, res) => {
       return res.status(400).json({ error: "Registrasi gagal dilakukan." });
 
     // 2. Masukkan profil ke tabel game umum kita menggunakan UUID jembatan
-    await pool.query(
-      `INSERT INTO "users" (username, gems, level, exp, supabase_uid) 
-       VALUES ($1, 1000, 1, 0, $2)`,
-      [username.trim(), data.user.id],
-    );
+    try {
+      await pool.query(
+        `INSERT INTO "users" (username, gems, level, exp, supabase_uid) 
+         VALUES ($1, 1000, 1, 0, $2)`,
+        [username.trim(), data.user.id],
+      );
+    } catch (dbErr) {
+      // Rollback: hapus akun Auth yang udah terlanjur dibuat,
+      // biar gak jadi orphaned account
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id).catch((e) =>
+        console.error("Gagal rollback Auth user:", e.message),
+      );
+
+      if (dbErr.code === "23505") {
+        // unique_violation — username udah dipakai
+        return res.status(400).json({ error: "Username sudah dipakai!" });
+      }
+
+      throw dbErr; // lempar ke catch luar buat 500 generic
+    }
 
     res.status(201).json({
       message:
@@ -372,9 +422,41 @@ app.post("/api/auth/register", registerLimiter, async (req, res) => {
 // [POST] Login Akun
 app.post("/api/auth/login", authLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email dan password wajib diisi!" });
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res
+        .status(400)
+        .json({ error: "Email/Username dan password wajib diisi!" });
+    }
+
+    let email = identifier.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    if (!isEmail) {
+      // Bukan format email → anggap username, resolve ke email asli
+      const result = await pool.query(
+        "SELECT supabase_uid FROM users WHERE username = $1",
+        [email],
+      );
+
+      if (result.rows.length === 0 || !result.rows[0].supabase_uid) {
+        return res
+          .status(400)
+          .json({ error: "Email/Username atau Password salah." });
+      }
+
+      const { data: adminData, error: adminError } =
+        await supabaseAdmin.auth.admin.getUserById(
+          result.rows[0].supabase_uid,
+        );
+
+      if (adminError || !adminData?.user?.email) {
+        return res
+          .status(400)
+          .json({ error: "Email/Username atau Password salah." });
+      }
+
+      email = adminData.user.email;
     }
 
     // Login ke Supabase Auth
@@ -382,11 +464,15 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
       email,
       password,
     });
-    if (error) return res.status(400).json({ error: error.message });
+    if (error) {
+      return res
+        .status(400)
+        .json({ error: "Email/Username atau Password salah." });
+    }
 
     res.json({
       message: "Login sukses!",
-      session: data.session, // Kirim data session (mengandung access_token) ke frontend
+      session: data.session,
     });
   } catch (err) {
     console.error("Login Error:", err.message);
