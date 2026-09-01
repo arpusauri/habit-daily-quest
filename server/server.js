@@ -45,6 +45,30 @@ const registerLimiter = rateLimit({
   },
 });
 
+const lookupEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 10, // max 10 percobaan lookup per 15 menit per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      error: "Terlalu banyak percobaan, coba lagi nanti.",
+    });
+  },
+});
+
+const checkUsernameLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 menit
+  max: 30, // lebih longgar karena ini dipakai real-time saat user ngetik
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      error: "Terlalu banyak percobaan, coba lagi nanti.",
+    });
+  },
+});
+
 // ==========================================
 // MIDDLEWARE CONFIGURATION
 // ==========================================
@@ -346,68 +370,71 @@ app.get("/", (req, res) => {
 // ==========================================
 
 // [GET] Lookup email berdasarkan username (untuk login)
-app.get("/api/auth/lookup-email", async (req, res) => {
+app.get("/api/auth/lookup-email", lookupEmailLimiter, async (req, res) => {
   try {
     const { username } = req.query;
-    
+ 
     if (!username || !username.trim()) {
       return res.status(400).json({ error: "Username wajib diisi!" });
     }
  
     const trimmedUsername = username.trim();
-    
+ 
     // Ambil supabase_uid dari tabel users berdasarkan username
     const result = await pool.query(
       `SELECT supabase_uid FROM "users" WHERE username = $1 LIMIT 1`,
       [trimmedUsername],
     );
-    
+ 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "User tidak ditemukan." });
     }
-    
+ 
     const supabaseUid = result.rows[0].supabase_uid;
-    
+ 
     // Ambil email dari Supabase Auth pakai admin client (service role)
-    const { data, error } = await supabaseAdmin.auth.admin.getUserById(
-      supabaseUid,
-    );
-    
+    const { data, error } =
+      await supabaseAdmin.auth.admin.getUserById(supabaseUid);
+ 
     if (error || !data?.user?.email) {
       return res.status(404).json({ error: "User tidak ditemukan." });
     }
-    
+ 
     res.json({ email: data.user.email });
   } catch (err) {
     console.error("Lookup Email Error:", err.message);
     res.status(500).json({ error: "Gagal mencari akun." });
   }
 });
-
+ 
 // [GET] Cek ketersediaan username secara real-time
-app.get("/api/auth/check-username", async (req, res) => {
-  try {
-    const { username } = req.query;
-    
-    if (!username || !username.trim()) {
-      return res.status(400).json({ error: "Username wajib diisi!" });
+app.get(
+  "/api/auth/check-username",
+  checkUsernameLimiter,
+  async (req, res) => {
+    try {
+      const { username } = req.query;
+ 
+      if (!username || !username.trim()) {
+        return res.status(400).json({ error: "Username wajib diisi!" });
+      }
+ 
+      const trimmedUsername = username.trim();
+ 
+      const result = await pool.query(
+        `SELECT id FROM "users" WHERE username = $1 LIMIT 1`,
+        [trimmedUsername],
+      );
+ 
+      const isAvailable = result.rows.length === 0;
+ 
+      res.json({ available: isAvailable });
+    } catch (err) {
+      console.error("Check Username Error:", err.message);
+      res.status(500).json({ error: "Gagal cek username." });
     }
- 
-    const trimmedUsername = username.trim();
- 
-    const result = await pool.query(
-      `SELECT id FROM "users" WHERE username = $1 LIMIT 1`,
-      [trimmedUsername],
-    );
- 
-    const isAvailable = result.rows.length === 0;
- 
-    res.json({ available: isAvailable });
-  } catch (err) {
-    console.error("Check Username Error:", err.message);
-    res.status(500).json({ error: "Gagal cek username." });
-  }
-});
+  },
+);
 
 // [POST] Register Akun Baru
 app.post("/api/auth/register", registerLimiter, async (req, res) => {
