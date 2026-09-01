@@ -152,6 +152,7 @@ function App() {
   const [isRevealing, setIsRevealing] = useState(false);
   const [showShowcase, setShowShowcase] = useState(false);
   const [viewingPlayer, setViewingPlayer] = useState(null);
+  const [activeTab, setActiveTab] = useState("quests"); // "quests" | "heatmap" | "inventory"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -547,16 +548,16 @@ function App() {
 
   // ── STYLING ──────────────────────────────────────────────────────────────
   const appBackground = isMatrixMode
-    ? "bg-black text-green-400 border-2 border-green-500 min-h-screen py-10 px-4 font-mono shadow-[0_0_30px_rgba(34,197,94,0.2)]"
+    ? "bg-black text-green-400 border-2 border-green-500 min-h-screen font-mono shadow-[0_0_30px_rgba(34,197,94,0.2)]"
     : isAuroraMode
-      ? "bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 text-slate-100 min-h-screen py-10 px-4 font-sans"
+      ? "bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-950 text-slate-100 min-h-screen font-sans"
       : isStarforgeMode
-        ? "bg-gradient-to-b from-slate-950 via-amber-950/50 to-slate-950 text-amber-50 min-h-screen py-10 px-4 font-sans"
+        ? "bg-gradient-to-b from-slate-950 via-amber-950/50 to-slate-950 text-amber-50 min-h-screen font-sans"
         : isNotepadMode
-          ? "bg-amber-50 text-stone-800 min-h-screen py-10 px-4 font-sans"
+          ? "bg-amber-50 text-stone-800 min-h-screen font-sans"
           : isDarkMode
-            ? "bg-slate-900 text-slate-100 min-h-screen py-10 px-4 font-sans"
-            : "bg-white text-gray-900 min-h-screen py-10 px-4 font-sans";
+            ? "bg-slate-900 text-slate-100 min-h-screen font-sans"
+            : "bg-white text-gray-900 min-h-[120vh] font-sans";
 
   const userCardBorder =
     userData.equipped_border === "r_blue"
@@ -754,14 +755,9 @@ function App() {
 
   return (
     <div className="w-full min-h-screen bg-white flex flex-col justify-between">
-      {/* 1. PEMBUNGKUS UTAMA: Latar belakang putih untuk atas & bawah */}
-
-      {/* ⚪ STRIP / HIDER ATAS (WARNA PUTIH) */}
-      <div className="w-full bg-white h-4 sm:h-6 shrink-0" />
-
       {/* 🌌 AREA UTAMA: Warna Tema (appBackground) Full Lebar Kiri-Kanan */}
       <div
-        className={`w-full flex-1 ${appBackground} relative overflow-x-hidden py-6`}
+        className={`w-full flex-1 ${appBackground} relative overflow-x-hidden`}
       >
         {/* 🌌 Aurora Glow Blobs */}
         {isAuroraMode && (
@@ -772,7 +768,7 @@ function App() {
           </div>
         )}
 
-        {/* ✨ Starforge Glow Blobs */}
+        {/* Starforge Glow Blobs */}
         {isStarforgeMode && (
           <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
             <div className="absolute top-[-8%] right-[-10%] w-72 h-72 bg-amber-400/20 rounded-full blur-3xl" />
@@ -781,33 +777,91 @@ function App() {
           </div>
         )}
 
-        {/* 🎯 WADAH KONTEN DI TENGAH */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6 relative z-10">
-          {/* 🔝 TOP NAVIGATION HEADER */}
-          <header className="w-full bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-2xl px-4 py-3 flex items-center justify-between gap-4 shadow-xl flex-wrap sm:flex-nowrap">
-            {/* Profile & Level */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 border-2 border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_12px_rgba(168,85,247,0.5)]">
-                <span className="text-[7px] font-bold text-purple-200 uppercase">
-                  Lv
-                </span>
-                <span className="font-black text-xs text-white leading-none">
-                  {userData?.level || 1}
-                </span>
+        {/*  TOP NAVIGATION HEADER - FULL WIDTH */}
+        <header className="w-full bg-[#1e720f] shadow-xl relative z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-stretch justify-between gap-4 flex-wrap sm:flex-nowrap">
+            {/* SISI KIRI: Profile Kotak + Tabs Placeholder */}
+            <div className="flex items-stretch gap-4 min-w-0">
+              {/* Profile - dikecilkan jadi kotak */}
+              <div className="flex items-center gap-2 shrink-0 py-3">
+                <div className="w-9 h-9 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 border border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                  <span className="text-[6px] font-bold text-purple-200 uppercase leading-none">
+                    Lv
+                  </span>
+                  <span className="font-black text-[11px] text-white leading-none">
+                    {userData?.level || 1}
+                  </span>
+                </div>
+                <div className="min-w-0 hidden sm:block">
+                  <h2
+                    className={`font-black text-sm truncate leading-tight ${nameTagStyle}`}
+                  >
+                    {userData?.username || "Player"}
+                  </h2>
+                  <p className="text-[9px] text-gray-400 font-semibold truncate leading-tight">
+                    {userData?.exp || 0}/100 EXP
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <h2 className={`font-black text-base truncate ${nameTagStyle}`}>
-                  {userData?.username || "LegendaryGachaKing"}
-                </h2>
-                <p className="text-[10px] text-gray-400 font-semibold truncate">
-                  {userData?.exp || 0} / 100 EXP
-                </p>
-              </div>
+              {/* Divider */}
+              <div className="hidden md:block w-px bg-gray-700 shrink-0 my-3" />
+
+              {/* Tabs Placeholder - edit sesuai kebutuhan */}
+              <nav className="hidden md:flex items-stretch gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("quests")}
+                  className={`relative flex items-center px-3 text-xs text-white font-bold transition-colors ${
+                    activeTab === "quests" ? "" : "hover:bg-[#51b330]"
+                  }`}
+                >
+                  Quests
+                  <span
+                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                      activeTab === "quests" ? "bg-[#7ad950]" : "bg-transparent"
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("heatmap")}
+                  className={`relative flex items-center px-3 text-xs text-white font-bold transition-colors ${
+                    activeTab === "heatmap" ? "" : "hover:bg-[#51b330]"
+                  }`}
+                >
+                  Activity
+                  <span
+                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                      activeTab === "heatmap"
+                        ? "bg-[#7ad950]"
+                        : "bg-transparent"
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("inventory")}
+                  className={`relative flex items-center px-3 text-xs text-white font-bold transition-colors ${
+                    activeTab === "inventory" ? "" : "hover:bg-[#51b330]"
+                  }`}
+                >
+                  Inventory
+                  <span
+                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                      activeTab === "inventory"
+                        ? "bg-[#7ad950]"
+                        : "bg-transparent"
+                    }`}
+                  />
+                </button>
+              </nav>
             </div>
 
-            {/* Gems & Action Buttons */}
-            <div className="flex items-center gap-3 shrink-0">
+            {/* SISI KANAN: Gems & Action Buttons */}
+            <div className="flex items-center gap-3 shrink-0 py-3">
               <div className="flex items-center gap-1.5 bg-gray-800/80 px-3 py-1.5 rounded-xl border border-gray-700">
                 <span className="text-sm">💎</span>
                 <span className="text-sm font-black text-white">
@@ -858,46 +912,56 @@ function App() {
                 </button>
               </div>
             </div>
-          </header>
+          </div>
+        </header>
 
-          {/* 🖼️ KONTEN UTAMA */}
-          <main className="w-full space-y-6">
-            <QuestSection
-              habits={habits}
-              newHabitName={newHabitName}
-              setNewHabitName={setNewHabitName}
-              addHabit={addHabit}
-              completeHabit={completeHabit}
-              deleteHabit={deleteHabit}
-              isMatrixMode={isMatrixMode}
-              isDarkMode={isDarkMode}
-              isAuroraMode={isAuroraMode}
-              isStarforgeMode={isStarforgeMode}
-              isNotepadMode={isNotepadMode}
-              onReorderHabits={handleReorderHabits}
-            />
+        <div className="max-w-7xl mx-auto px-10 sm:px-6 relative z-10 py-6">
+          <div className="rounded-lg p-4 sm:p-6 space-y-6 bg-white">
+            {/* 🖼️ KONTEN UTAMA */}
+            <main className="w-full space-y-6">
+              {activeTab === "quests" && (
+                <QuestSection
+                  habits={habits}
+                  newHabitName={newHabitName}
+                  setNewHabitName={setNewHabitName}
+                  addHabit={addHabit}
+                  completeHabit={completeHabit}
+                  deleteHabit={deleteHabit}
+                  isMatrixMode={isMatrixMode}
+                  isDarkMode={isDarkMode}
+                  isAuroraMode={isAuroraMode}
+                  isStarforgeMode={isStarforgeMode}
+                  isNotepadMode={isNotepadMode}
+                  onReorderHabits={handleReorderHabits}
+                />
+              )}
 
-            <HabitHeatmap
-              apiUrl={API_URL}
-              equippedTheme={userData?.equipped_theme}
-              refreshTrigger={activityTrigger}
-              unlockedCosmeticsCount={userData?.inventory?.length || 0}
-            />
+              {activeTab === "heatmap" && (
+                <HabitHeatmap
+                  apiUrl={API_URL}
+                  equippedTheme={userData?.equipped_theme}
+                  refreshTrigger={activityTrigger}
+                  unlockedCosmeticsCount={userData?.inventory?.length || 0}
+                />
+              )}
 
-            <Inventory
-              userData={userData}
-              selectedRarityFilter={selectedRarityFilter}
-              setSelectedRarityFilter={setSelectedRarityFilter}
-              equipItem={equipItem}
-              unequipItem={unequipItem}
-              setShowItemIndex={setShowItemIndex}
-              isAuroraMode={isAuroraMode}
-              isMatrixMode={isMatrixMode}
-              isStarforgeMode={isStarforgeMode}
-              isNotepadMode={isNotepadMode}
-              isDarkMode={isDarkMode}
-            />
-          </main>
+              {activeTab === "inventory" && (
+                <Inventory
+                  userData={userData}
+                  selectedRarityFilter={selectedRarityFilter}
+                  setSelectedRarityFilter={setSelectedRarityFilter}
+                  equipItem={equipItem}
+                  unequipItem={unequipItem}
+                  setShowItemIndex={setShowItemIndex}
+                  isAuroraMode={isAuroraMode}
+                  isMatrixMode={isMatrixMode}
+                  isStarforgeMode={isStarforgeMode}
+                  isNotepadMode={isNotepadMode}
+                  isDarkMode={isDarkMode}
+                />
+              )}
+            </main>
+          </div>
         </div>
       </div>
 

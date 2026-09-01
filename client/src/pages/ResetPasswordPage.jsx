@@ -75,7 +75,7 @@ export default function ResetPasswordPage({ onSuccess }) {
             Gambit
           </h1>
           <p className="text-xs text-[#1e720f] mt-2 tracking-widest">
-            Set New Password
+            Reset Password
           </p>
         </div>
 
@@ -99,7 +99,7 @@ export default function ResetPasswordPage({ onSuccess }) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="eg., ********"
+                placeholder="Enter your new password"
                 required
                 className={`w-full px-4 py-2.5 bg-white border-2 rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 ${
                   password
@@ -124,7 +124,7 @@ export default function ResetPasswordPage({ onSuccess }) {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="e.g., ********"
+                placeholder="Make sure it's the same as above"
                 required
                 className={`w-full px-4 py-2.5 bg-white border-2 rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 ${
                   confirmPassword
@@ -156,7 +156,7 @@ export default function ResetPasswordPage({ onSuccess }) {
                   : "bg-[#51b330] hover:bg-[#409228] text-white active:scale-95"
               }`}
             >
-              {loading ? "Saving..." : "Save New Password"}
+              {loading ? "Saving..." : "Set New Password"}
             </button>
           </form>
         )}
