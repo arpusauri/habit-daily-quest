@@ -26,9 +26,10 @@ import NotificationOverlay from "./components/NotificationOverlay";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const API_URL =
-  window.location.hostname === "localhost"
+  import.meta.env.VITE_API_URL ||
+  (window.location.hostname === "localhost"
     ? "http://localhost:5000"
-    : "https://habit-daily-api.bonto.run";
+    : "https://habit-daily-quest-server.vercel.app");
 
 const ITEM_NAME_MAP = {
   r_blue: "Cyan Border",
