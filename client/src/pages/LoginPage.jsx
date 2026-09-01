@@ -3,7 +3,12 @@ import { supabase } from "../supabaseClient";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
+export default function LoginPage({
+  onLogin,
+  apiUrl,
+  onSwitchToRegister,
+  onSwitchToForgotPassword,
+}) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +35,7 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
         if (!res.ok) {
           // Samain pesan errornya sama kayak wrong password,
           // biar gak jadi celah buat nebak-nebak username yang valid
-          throw new Error("Email/Username atau password salah.");
+          throw new Error("Email/Username or password is incorrect.");
         }
 
         emailToUse = lookupData.email;
@@ -42,7 +47,7 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
       });
 
       if (error) {
-        throw new Error("Email/Username atau password salah.");
+        throw new Error("Email/Username or password is incorrect.");
       }
 
       onLogin(data.session);
@@ -77,10 +82,21 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Username atau email (case sensitive)"
+              placeholder="Username or email (case sensitive)"
               required
               className="w-full px-4 py-2.5 bg-white border-2 border-[#1e720f] rounded-sm text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-[#053b05]"
             />
+          </div>
+
+          {/* Forgot Password */}
+          <div className="text-right -mb-[18.1px]">
+            <button
+              type="button"
+              onClick={onSwitchToForgotPassword}
+              className="text-xs text-[#0a500a] hover:underline font-semibold"
+            >
+              Forgot Password?
+            </button>
           </div>
 
           <div>
@@ -118,7 +134,7 @@ export default function LoginPage({ onLogin, apiUrl, onSwitchToRegister }) {
 
         {/* Bottom CTA */}
         <div className="text-center mt-6 pt-6 border-t-2 border-gray-300">
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-gray-600">
             <button
               onClick={onSwitchToRegister}
               className="text-[#0a500a] hover:underline"
