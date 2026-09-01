@@ -18,6 +18,8 @@ import { playSound } from "./utils/soundEngine";
 import { supabase } from "./supabaseClient";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ShowcaseModal from "./components/ShowcaseModal";
 import NotificationOverlay from "./components/NotificationOverlay";
 
@@ -129,7 +131,16 @@ function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activityTrigger, setActivityTrigger] = useState(0);
-  const [showLogin, setShowLogin] = useState(true); // Default show login
+  const [authPage, setAuthPage] = useState(() => {
+    // Deteksi link reset password dari email (Supabase kirim hash #type=recovery)
+    if (
+      typeof window !== "undefined" &&
+      window.location.hash.includes("type=recovery")
+    ) {
+      return "reset-password";
+    }
+    return "login";
+  });
 
   const rollIntervalRef = useRef(null);
   const rollTimeoutRef = useRef(null);
@@ -639,23 +650,41 @@ function App() {
     return <div>Loading...</div>;
   }
 
-  if (!session) {
+  if (authPage === "reset-password") {
     return (
-      <>
-        {showLogin ? (
-          <LoginPage
-            onLogin={(session) => setSession(session)}
-            apiUrl={API_URL}
-            onSwitchToRegister={() => setShowLogin(false)}
-          />
-        ) : (
-          <RegisterPage
-            onLogin={(session) => setSession(session)}
-            apiUrl={API_URL}
-            onSwitchToLogin={() => setShowLogin(true)}
-          />
-        )}
-      </>
+      <ResetPasswordPage
+        onSuccess={() => {
+          setAuthPage("login");
+          window.location.hash = "";
+        }}
+      />
+    );
+  }
+
+  if (!session) {
+    if (authPage === "forgot-password") {
+      return (
+        <ForgotPasswordPage onSwitchToLogin={() => setAuthPage("login")} />
+      );
+    }
+
+    if (authPage === "register") {
+      return (
+        <RegisterPage
+          onLogin={(session) => setSession(session)}
+          apiUrl={API_URL}
+          onSwitchToLogin={() => setAuthPage("login")}
+        />
+      );
+    }
+
+    return (
+      <LoginPage
+        onLogin={(session) => setSession(session)}
+        apiUrl={API_URL}
+        onSwitchToRegister={() => setAuthPage("register")}
+        onSwitchToForgotPassword={() => setAuthPage("forgot-password")}
+      />
     );
   }
 
@@ -724,89 +753,164 @@ function App() {
   };
 
   return (
-    <div
-      className={`${appBackground} min-h-screen-mobile p-4 relative overflow-x-hidden`}
-    >
-      {/* 🌌 Aurora Glow Blobs */}
-      {isAuroraMode && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-[-8%] left-[-10%] w-72 h-72 bg-fuchsia-500/20 rounded-full blur-3xl" />
-          <div className="absolute top-[15%] right-[-12%] w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl" />
-          <div className="absolute bottom-[-10%] left-[15%] w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+    <div className="w-full min-h-screen bg-white flex flex-col justify-between">
+      {/* 1. PEMBUNGKUS UTAMA: Latar belakang putih untuk atas & bawah */}
+
+      {/* ⚪ STRIP / HIDER ATAS (WARNA PUTIH) */}
+      <div className="w-full bg-white h-4 sm:h-6 shrink-0" />
+
+      {/* 🌌 AREA UTAMA: Warna Tema (appBackground) Full Lebar Kiri-Kanan */}
+      <div
+        className={`w-full flex-1 ${appBackground} relative overflow-x-hidden py-6`}
+      >
+        {/* 🌌 Aurora Glow Blobs */}
+        {isAuroraMode && (
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-8%] left-[-10%] w-72 h-72 bg-fuchsia-500/20 rounded-full blur-3xl" />
+            <div className="absolute top-[15%] right-[-12%] w-80 h-80 bg-cyan-400/15 rounded-full blur-3xl" />
+            <div className="absolute bottom-[-10%] left-[15%] w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+          </div>
+        )}
+
+        {/* ✨ Starforge Glow Blobs */}
+        {isStarforgeMode && (
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-8%] right-[-10%] w-72 h-72 bg-amber-400/20 rounded-full blur-3xl" />
+            <div className="absolute top-[20%] left-[-12%] w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-[-10%] right-[10%] w-96 h-96 bg-orange-400/15 rounded-full blur-3xl" />
+          </div>
+        )}
+
+        {/* 🎯 WADAH KONTEN DI TENGAH */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6 relative z-10">
+          {/* 🔝 TOP NAVIGATION HEADER */}
+          <header className="w-full bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-2xl px-4 py-3 flex items-center justify-between gap-4 shadow-xl flex-wrap sm:flex-nowrap">
+            {/* Profile & Level */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 border-2 border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_12px_rgba(168,85,247,0.5)]">
+                <span className="text-[7px] font-bold text-purple-200 uppercase">
+                  Lv
+                </span>
+                <span className="font-black text-xs text-white leading-none">
+                  {userData?.level || 1}
+                </span>
+              </div>
+
+              <div className="min-w-0">
+                <h2 className={`font-black text-base truncate ${nameTagStyle}`}>
+                  {userData?.username || "LegendaryGachaKing"}
+                </h2>
+                <p className="text-[10px] text-gray-400 font-semibold truncate">
+                  {userData?.exp || 0} / 100 EXP
+                </p>
+              </div>
+            </div>
+
+            {/* Gems & Action Buttons */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-1.5 bg-gray-800/80 px-3 py-1.5 rounded-xl border border-gray-700">
+                <span className="text-sm">💎</span>
+                <span className="text-sm font-black text-white">
+                  {userData?.gems || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLeaderboard(true)}
+                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
+                  title="Leaderboard"
+                >
+                  🏆
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBanner(true)}
+                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
+                  title="Gacha Banner"
+                >
+                  ✨
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShop(true)}
+                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
+                  title="Shop"
+                >
+                  🛒
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShowcase(true)}
+                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
+                  title="Player Card"
+                >
+                  🎴
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => supabase.auth.signOut()}
+                  className="px-3 py-2 text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition-all active:scale-95"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* 🖼️ KONTEN UTAMA */}
+          <main className="w-full space-y-6">
+            <QuestSection
+              habits={habits}
+              newHabitName={newHabitName}
+              setNewHabitName={setNewHabitName}
+              addHabit={addHabit}
+              completeHabit={completeHabit}
+              deleteHabit={deleteHabit}
+              isMatrixMode={isMatrixMode}
+              isDarkMode={isDarkMode}
+              isAuroraMode={isAuroraMode}
+              isStarforgeMode={isStarforgeMode}
+              isNotepadMode={isNotepadMode}
+              onReorderHabits={handleReorderHabits}
+            />
+
+            <HabitHeatmap
+              apiUrl={API_URL}
+              equippedTheme={userData?.equipped_theme}
+              refreshTrigger={activityTrigger}
+              unlockedCosmeticsCount={userData?.inventory?.length || 0}
+            />
+
+            <Inventory
+              userData={userData}
+              selectedRarityFilter={selectedRarityFilter}
+              setSelectedRarityFilter={setSelectedRarityFilter}
+              equipItem={equipItem}
+              unequipItem={unequipItem}
+              setShowItemIndex={setShowItemIndex}
+              isAuroraMode={isAuroraMode}
+              isMatrixMode={isMatrixMode}
+              isStarforgeMode={isStarforgeMode}
+              isNotepadMode={isNotepadMode}
+              isDarkMode={isDarkMode}
+            />
+          </main>
         </div>
-      )}
-
-      {/* ✨ Starforge Glow Blobs */}
-      {isStarforgeMode && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-[-8%] right-[-10%] w-72 h-72 bg-amber-400/20 rounded-full blur-3xl" />
-          <div className="absolute top-[20%] left-[-12%] w-80 h-80 bg-yellow-300/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-[-10%] right-[10%] w-96 h-96 bg-orange-400/15 rounded-full blur-3xl" />
-        </div>
-      )}
-
-      <Sidebar
-        onOpenLeaderboard={() => setShowLeaderboard(true)}
-        onOpenBanner={() => setShowBanner(true)}
-        onOpenShop={() => setShowShop(true)}
-        onOpenShowcase={() => setShowShowcase(true)}
-      />
-
-      <div className="max-w-xl mx-auto space-y-4">
-        <UserProfile
-          userData={userData}
-          userCardBorder={userCardBorder}
-          nameTagStyle={nameTagStyle}
-          onOpenShowcase={() => setShowShowcase(true)}
-          onLogout={() => supabase.auth.signOut()}
-        />
-
-        <QuestSection
-          habits={habits}
-          newHabitName={newHabitName}
-          setNewHabitName={setNewHabitName}
-          addHabit={addHabit}
-          completeHabit={completeHabit}
-          deleteHabit={deleteHabit}
-          isMatrixMode={isMatrixMode}
-          isDarkMode={isDarkMode}
-          isAuroraMode={isAuroraMode}
-          isStarforgeMode={isStarforgeMode}
-          isNotepadMode={isNotepadMode}
-          onReorderHabits={handleReorderHabits}
-        />
-
-        <HabitHeatmap
-          apiUrl={API_URL}
-          equippedTheme={userData?.equipped_theme}
-          refreshTrigger={activityTrigger}
-          unlockedCosmeticsCount={userData?.inventory?.length || 0}
-        />
-
-        <Inventory
-          userData={userData}
-          selectedRarityFilter={selectedRarityFilter}
-          setSelectedRarityFilter={setSelectedRarityFilter}
-          equipItem={equipItem}
-          unequipItem={unequipItem}
-          setShowItemIndex={setShowItemIndex}
-          isAuroraMode={isAuroraMode}
-          isMatrixMode={isMatrixMode}
-          isStarforgeMode={isStarforgeMode}
-          isNotepadMode={isNotepadMode}
-          isDarkMode={isDarkMode}
-        />
       </div>
 
-      {/* ================= OVERLAYS & MODALS ================= */}
+      {/* ⚪ STRIP / FOOTER BAWAH (WARNA PUTIH) */}
+      <div className="w-full bg-white h-4 sm:h-6 shrink-0" />
+
+      {/* MODALS & OVERLAYS */}
       <LeaderboardOverlay
         isOpen={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
-        onViewPlayer={handleViewPlayer} // 👈 prop yang kemarin belum ke-wire
+        onViewPlayer={handleViewPlayer}
       />
-
       <NotificationOverlay notifications={notifications} />
-
       {viewingPlayer && (
         <ShowcaseModal
           isOpen={!!viewingPlayer}
@@ -815,7 +919,6 @@ function App() {
           equippedCosmetics={viewingPlayerCosmetics}
         />
       )}
-
       <BannerOverlay
         isOpen={showBanner}
         onClose={() => setShowBanner(false)}
@@ -824,7 +927,6 @@ function App() {
         userData={userData}
         apiUrl={API_URL}
       />
-
       <ShopOverlay
         isOpen={showShop}
         onClose={() => setShowShop(false)}
@@ -836,25 +938,22 @@ function App() {
           rollGacha({ endpoint: "/api/shop/buy-ticket", requireGems: false });
         }}
       />
-
       {showItemIndex && (
         <ItemIndex
           userData={userData}
           onClose={() => setShowItemIndex(false)}
         />
       )}
-
       <ShowcaseModal
         isOpen={showShowcase}
         onClose={() => setShowShowcase(false)}
-        userData={userData} // ← pastikan ini ada
+        userData={userData}
         equippedCosmetics={{
           theme: userData?.equipped_theme,
           border: userData?.equipped_border,
           title: userData?.equipped_font,
         }}
       />
-
       <GachaOverlay
         isRolling={isRolling}
         isRevealing={isRevealing}

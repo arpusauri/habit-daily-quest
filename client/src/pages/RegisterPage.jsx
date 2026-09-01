@@ -294,7 +294,7 @@ export default function RegisterPage({ onLogin, apiUrl, onSwitchToLogin }) {
 
         {/* Bottom CTA */}
         <div className="text-center mt-6 pt-6 border-t-2 border-gray-300">
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-gray-600">
             <button
               onClick={onSwitchToLogin}
               className="text-[#0a500a] hover:underline"
