@@ -150,23 +150,28 @@ const HabitHeatmap = ({ apiUrl = "", equippedTheme, refreshTrigger }) => {
           itemBaseBg: "bg-slate-950/50",
           itemInactiveBorder: "border-slate-800/60 opacity-70",
         };
+      // ─────────────────────────────────────────────────────
+      // DEFAULT - mengikuti visual LeaderboardSection (hijau)
+      // Tambahin case baru di sini (misal "wireframe") kalau
+      // mau bikin varian tema lain tanpa nyentuh JSX di bawah
+      // ─────────────────────────────────────────────────────
       default:
         return {
-          colors: ["#f1f5f9", "#cbd5e1", "#94a3b8", "#64748b", "#334155"],
-          activeBg: "bg-gray-900",
+          colors: ["#f0fdf4", "#bbf7d0", "#4ade80", "#22c55e", "#166534"],
+          activeBg: "bg-[#51b330]",
           activeText: "text-white",
-          textAccent: "text-slate-600",
-          borderGlow: "border-slate-300 shadow-slate-200/40",
-          badgeBg: "bg-slate-100 text-slate-700 border-slate-300",
+          textAccent: "text-[#1e720f]",
+          borderGlow: "border-[#51b330]/50 shadow-green-200/40",
+          badgeBg: "bg-green-50 text-[#1e720f] border-green-200",
           container: "bg-white border-gray-200 text-gray-900",
-          tabContainer: "bg-white border-gray-300",
-          tabInactive: "text-gray-400 hover:text-gray-900",
-          cardBg: "bg-gray-50 border-gray-200",
+          tabContainer: "bg-gray-100 border border-gray-200",
+          tabInactive: "text-gray-500 hover:text-gray-900",
+          cardBg: "bg-white border-gray-200 shadow-sm",
           subText: "text-gray-500",
-          mainText: "text-gray-800",
-          todayRing: "ring-2 ring-gray-900/40 bg-gray-100",
-          emptyCell: "bg-gray-200 text-gray-500",
-          itemBaseBg: "bg-gray-50",
+          mainText: "text-gray-900",
+          todayRing: "ring-2 ring-[#51b330]/40 bg-green-50",
+          emptyCell: "bg-gray-100 text-gray-400",
+          itemBaseBg: "bg-white",
           itemInactiveBorder: "border-gray-200 opacity-70",
         };
     }

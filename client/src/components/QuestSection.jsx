@@ -8,9 +8,44 @@ const QuestSection = ({
   completeHabit,
   deleteHabit,
   onReorderHabits, // Callback untuk reorder habits
+  // Tambahin prop tema di sini nanti kalau mau bikin varian lain,
+  // contoh: isMatrixMode, isDarkMode, dst — samain sama pola
+  // yang dipakai di Inventory.jsx / HabitHeatmap.jsx
 }) => {
   const [draggedHabit, setDraggedHabit] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // ─────────────────────────────────────────────────────────
+  // THEME CONFIG - tambahin key baru di sini (misal "wireframe")
+  // buat bikin varian tema baru tanpa nyentuh JSX di bawah
+  // ─────────────────────────────────────────────────────────
+  const themeConfig = {
+    // DEFAULT - mengikuti visual LeaderboardSection (hijau)
+    light: {
+      headerBorderClass: "border-gray-300",
+      titleClass: "text-gray-900",
+      containerClass: "bg-white border-gray-200 shadow-sm",
+      inputClass:
+        "border-gray-300 focus:ring-2 focus:ring-[#51b330] focus:border-[#51b330]",
+      addButtonClass: "bg-[#51b330] text-white hover:bg-[#409228]",
+      dividerClass: "border-gray-200",
+      emptyStateClass: "border-gray-300 text-gray-600",
+      cardBase: "bg-white border-gray-200 shadow-sm",
+      cardDragging: "opacity-50 bg-gray-50 border-gray-200",
+      cardDragOver: "bg-green-50 border-l-[#51b330] border-gray-200",
+      cardCompleted: "bg-gray-50 border-l-gray-300 border-gray-200",
+      cardActive: "bg-white border-l-[#51b330] border-gray-200",
+      titleCompletedClass: "text-gray-500 line-through",
+      titleActiveClass: "text-gray-900",
+      streakCompletedClass: "text-gray-400",
+      streakActiveClass: "text-orange-500",
+      completeButtonClass: "bg-[#51b330] text-white hover:bg-[#409228]",
+      clearedBadgeClass: "text-[#1e720f] bg-green-50 border-green-200",
+      deleteButtonClass: "text-gray-400 hover:text-red-500 hover:bg-red-50",
+    },
+  };
+
+  const theme = themeConfig.light; // ganti sesuai kondisi tema kalau udah nambah varian
 
   // Handle drag start
   const handleDragStart = (e, habit) => {
@@ -64,12 +99,16 @@ const QuestSection = ({
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="text-left mt-8 mb-4 border-b border-gray-300 pb-2">
-        <h2 className="text-2xl font-black text-gray-900">Daily Quests</h2>
+      <div
+        className={`text-left mt-8 mb-4 border-b pb-2 ${theme.headerBorderClass}`}
+      >
+        <h2 className={`text-2xl font-black ${theme.titleClass}`}>
+          Daily Quests
+        </h2>
       </div>
 
       {/* Background Container */}
-      <div className="bg-white border border-gray-200 p-6 shadow-sm">
+      <div className={`border p-6 ${theme.containerClass}`}>
         {/* Form Add Quest */}
         <form onSubmit={addHabit} className="mb-6 flex gap-2 items-center">
           <input
@@ -77,26 +116,24 @@ const QuestSection = ({
             value={newHabitName}
             onChange={(e) => setNewHabitName(e.target.value)}
             placeholder="Add a new daily quest..."
-            className="flex-1 min-w-0 px-4 py-2 text-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`flex-1 min-w-0 px-4 py-2 text-sm border focus:outline-none ${theme.inputClass}`}
           />
           <button
             type="submit"
-            className="px-5 py-2 text-sm font-black text-white bg-gray-900 hover:bg-gray-700 active:scale-95 transition-all shadow-sm"
+            className={`px-5 py-2 text-sm font-black active:scale-95 transition-all shadow-sm ${theme.addButtonClass}`}
           >
             Add Quest
           </button>
         </form>
 
         {/* Divider */}
-        <div className="border-t border-gray-200 mb-4"></div>
+        <div className={`border-t mb-4 ${theme.dividerClass}`}></div>
 
         {/* Habits List */}
         <div className="space-y-3">
           {habits.length === 0 ? (
-            <div className="p-6 text-center border border-gray-300">
-              <p className="text-gray-600">
-                No quests yet. Add one to get started!
-              </p>
+            <div className={`p-6 text-center border ${theme.emptyStateClass}`}>
+              <p>No quests yet. Add one to get started!</p>
             </div>
           ) : (
             habits.map((habit, index) => (
@@ -108,29 +145,31 @@ const QuestSection = ({
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, habit)}
                 onDragEnd={handleDragEnd}
-                className={`p-4 border-l-4 flex justify-between items-center transition-all cursor-move ${
+                className={`p-4 border-l-4 border flex justify-between items-center transition-all cursor-move ${
                   draggedHabit?.id === habit.id
-                    ? "opacity-50 bg-gray-50"
+                    ? theme.cardDragging
                     : dragOverIndex === index
-                      ? "bg-blue-50 border-l-blue-500"
+                      ? theme.cardDragOver
                       : habit.is_completed
-                        ? "bg-gray-50 border-l-gray-300"
-                        : "bg-white border-l-blue-500"
-                } ${habit.is_completed ? "border border-gray-200" : "border border-gray-300"}`}
+                        ? theme.cardCompleted
+                        : theme.cardActive
+                }`}
               >
                 <div className="text-left flex-1">
                   <h3
                     className={`text-lg font-semibold ${
                       habit.is_completed
-                        ? "text-gray-500 line-through"
-                        : "text-gray-900"
+                        ? theme.titleCompletedClass
+                        : theme.titleActiveClass
                     }`}
                   >
                     {habit.name}
                   </h3>
                   <p
                     className={`text-sm font-bold mt-1 ${
-                      habit.is_completed ? "text-gray-400" : "text-orange-500"
+                      habit.is_completed
+                        ? theme.streakCompletedClass
+                        : theme.streakActiveClass
                     }`}
                   >
                     🔥 {habit.streak} Day Streak
@@ -142,12 +181,14 @@ const QuestSection = ({
                     <button
                       type="button"
                       onClick={() => completeHabit(habit.id)}
-                      className="px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all shadow-sm text-sm"
+                      className={`px-4 py-2 font-semibold active:scale-95 transition-all shadow-sm text-sm ${theme.completeButtonClass}`}
                     >
-                      
+                      Complete
                     </button>
                   ) : (
-                    <span className="px-4 py-2 font-semibold text-green-700 bg-green-100 border border-green-300 text-sm">
+                    <span
+                      className={`px-4 py-2 font-semibold border text-sm ${theme.clearedBadgeClass}`}
+                    >
                       Cleared!
                     </span>
                   )}
@@ -155,7 +196,7 @@ const QuestSection = ({
                   <button
                     type="button"
                     onClick={() => deleteHabit(habit.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    className={`p-2 transition-colors ${theme.deleteButtonClass}`}
                     title="Delete Quest"
                   >
                     X

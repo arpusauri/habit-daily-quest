@@ -30,7 +30,7 @@ const Inventory = ({
       titleClass:
         "text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]",
       itemIndexButtonClass:
-        "bg-green-950/40 text-green-400 border border-green-400 hover:bg-green-400 hover:text-black font-mono",
+        "bg-green-900/30 text-green-400 border border-green-400 hover:bg-green-400 hover:text-black font-mono",
       filterContainerClass: "bg-black border-green-600/30",
       filterActiveClass:
         "bg-green-500 text-black shadow-md border border-green-400 font-mono",
@@ -211,7 +211,7 @@ const Inventory = ({
       title: "Inventory",
       titleClass: "text-gray-900",
       itemIndexButtonClass:
-        "border border-gray-900 text-gray-900 bg-white hover:bg-gray-900 hover:text-white",
+        "bg-[#51b330] text-white hover:bg-[#409228] active:scale-95 shadow-sm",
       filterContainerClass: "bg-gray-100 border border-gray-200",
       filterActiveClass: "bg-[#51b330] text-white shadow-sm",
       filterInactiveClass: "text-gray-500 hover:text-gray-900",

@@ -300,20 +300,34 @@ function App() {
       });
   };
 
-  // const handleReorderHabits = (reorderedHabits) => {
-  //   setHabits(reorderedHabits);
-  // Optional: save ke database
-  // authFetch(`${API_URL}/api/habits/reorder`, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ habits: reorderedHabits }),
-  // });
-  // };
-
   const handleReorderHabits = (reorderedHabits) => {
-    setHabits(reorderedHabits);
-    // Optional: save ke database
-    // await updateHabitsOrder(reorderedHabits);
+    const previousHabits = habits; // snapshot buat revert kalau gagal
+    setHabits(reorderedHabits); // optimistic update
+
+    // Filter habit temp (yang belum ke-save/ belum punya id asli dari server)
+    const habitIds = reorderedHabits
+      .map((h) => h.id)
+      .filter((id) => !(typeof id === "string" && id.startsWith("temp_")));
+
+    authFetch(`${API_URL}/api/habits/reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ habitIds }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          showWarning("Error", data.error, 3000);
+          setHabits(previousHabits);
+          return;
+        }
+        setHabits(data.habits);
+      })
+      .catch((err) => {
+        console.error("Error reordering habits:", err);
+        showWarning("Error", "Gagal menyimpan urutan quest", 2000);
+        setHabits(previousHabits);
+      });
   };
 
   const rollGacha = async (options = {}) => {

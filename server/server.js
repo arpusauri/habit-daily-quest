@@ -572,7 +572,7 @@ app.get("/api/dashboard", authenticateUser, async (req, res) => {
     }
 
     const habitsResult = await pool.query(
-      "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
+      "SELECT * FROM habits WHERE user_id = $1 ORDER BY sort_order ASC, id ASC",
       [userId],
     );
     const inventoryResult = await pool.query(
@@ -716,7 +716,7 @@ app.post("/api/habits/:id/complete", authenticateUser, async (req, res) => {
       userId,
     ]);
     const updatedHabits = await pool.query(
-      "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
+      "SELECT * FROM habits WHERE user_id = $1 ORDER BY sort_order ASC, id ASC",
       [userId],
     );
     const inventoryResult = await pool.query(
@@ -826,12 +826,19 @@ app.post("/api/habits", authenticateUser, async (req, res) => {
       return res.status(400).json({ error: "Habit name cannot be empty!" });
     }
 
-    await pool.query(
-      "INSERT INTO habits (user_id, name, is_completed, streak) VALUES ($1, $2, false, 0)",
-      [userId, name.trim()],
+    const maxOrderResult = await pool.query(
+      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM habits WHERE user_id = $1",
+      [userId],
     );
+    const nextOrder = maxOrderResult.rows[0].next_order;
+
+    await pool.query(
+      "INSERT INTO habits (user_id, name, is_completed, streak, sort_order) VALUES ($1, $2, false, 0, $3)",
+      [userId, name.trim(), nextOrder],
+    );
+
     const updatedHabits = await pool.query(
-      "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
+      "SELECT * FROM habits WHERE user_id = $1 ORDER BY sort_order ASC, id ASC",
       [userId],
     );
 
@@ -954,7 +961,7 @@ app.delete("/api/habits/:id", authenticateUser, async (req, res) => {
       userId,
     ]);
     const updatedHabits = await pool.query(
-      "SELECT * FROM habits WHERE user_id = $1 ORDER BY id ASC",
+      "SELECT * FROM habits WHERE user_id = $1 ORDER BY sort_order ASC, id ASC",
       [userId],
     );
 
@@ -1275,6 +1282,36 @@ app.post(
     }
   },
 );
+
+app.post("/api/habits/reorder", authenticateUser, async (req, res) => {
+  try {
+    const { habitIds } = req.body;
+    const userId = req.userId;
+
+    if (!Array.isArray(habitIds)) {
+      return res.status(400).json({ error: "habitIds harus berupa array." });
+    }
+
+    await Promise.all(
+      habitIds.map((id, index) =>
+        pool.query(
+          "UPDATE habits SET sort_order = $1 WHERE id = $2 AND user_id = $3",
+          [index, id, userId],
+        ),
+      ),
+    );
+
+    const updatedHabits = await pool.query(
+      "SELECT * FROM habits WHERE user_id = $1 ORDER BY sort_order ASC, id ASC",
+      [userId],
+    );
+
+    res.json({ habits: updatedHabits.rows });
+  } catch (err) {
+    console.error("Reorder habits error:", err.message);
+    res.status(500).json({ error: "Server error saat reorder habits." });
+  }
+});
 
 // [POST] Beli Streak Shield pakai Shards
 const SHIELD_PRICE = 120;
