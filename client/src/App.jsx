@@ -21,6 +21,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ShowcaseModal from "./components/ShowcaseModal";
 import NotificationOverlay from "./components/NotificationOverlay";
+import LoadingScreen from "./components/LoadingScreen"
 
 import Dropdown from "./assets/icons/down.svg?react";
 import GachaIcon from "./assets/icons/stars.svg?react";
@@ -136,7 +137,6 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [activityTrigger, setActivityTrigger] = useState(0);
   const [authPage, setAuthPage] = useState(() => {
-    // Deteksi link reset password dari email (Supabase kirim hash #type=recovery)
     if (
       typeof window !== "undefined" &&
       window.location.hash.includes("type=recovery")
@@ -157,6 +157,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("quests");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -186,6 +187,7 @@ function App() {
   useEffect(() => {
     if (!session) return;
 
+    setDataLoading(true);
     fetch(`${API_URL}/api/dashboard`, {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
@@ -196,8 +198,9 @@ function App() {
         setUserData(data.user);
         setHabits(data.habits);
       })
-      .catch((err) => console.error("Error:", err));
-  }, [session]);
+      .catch((err) => console.error("Error:", err))
+      .finally(() => setDataLoading(false));
+  }, [session?.user?.id]);
 
   const authFetch = (url, options = {}) => {
     return fetch(url, {
@@ -654,16 +657,7 @@ function App() {
   };
 
   // ── AUTH GUARD ────────────────────────────────────────────────────────────
-  if (authLoading)
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-white">Loading...</p>
-      </div>
-    );
-
-  if (authLoading) {
-    return <div>Loading...</div>;
-  }
+  if (authLoading) return <LoadingScreen />;
 
   if (authPage === "reset-password") {
     return (
@@ -702,6 +696,8 @@ function App() {
       />
     );
   }
+
+  if (dataLoading) return <LoadingScreen />;
 
   const closeGachaOverlay = () => {
     setGachaResult(null);
