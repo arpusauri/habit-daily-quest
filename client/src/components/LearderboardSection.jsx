@@ -1,25 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 
-function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
+const LeaderboardSection = ({ onViewPlayer }) => {
   const [tab, setTab] = useState("level"); // 'level' | 'streak'
   const [leaderboard, setLeaderboard] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Shortcut tombol ESC untuk menutup Overlay
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape" && isOpen) onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Fetch/search data setiap kali overlay dibuka, tab berubah, atau user ngetik search
-  useEffect(() => {
-    if (!isOpen) return;
-
     if (searchQuery.trim() === "") {
       fetchLeaderboard();
       return;
@@ -27,7 +15,8 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
 
     const timeout = setTimeout(() => searchPlayers(searchQuery), 300); // debounce
     return () => clearTimeout(timeout);
-  }, [searchQuery, isOpen, tab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, tab]);
 
   const searchPlayers = async (query) => {
     setLoading(true);
@@ -108,43 +97,25 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
     return `${days} hari lalu`;
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl p-6 text-white shadow-2xl relative flex flex-col max-h-[85vh]">
-        {/* Header Overlay */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4 mb-4">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">🏆</span>
-            <div>
-              <h2 className="text-xl font-black text-purple-400 tracking-wide">
-                LEADERBOARD
-              </h2>
-              <p className="text-xs text-gray-400">
-                Pemain dengan level & streak tertinggi
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white font-bold text-xl p-2 rounded-lg hover:bg-slate-800 transition-colors"
-          >
-            ✕
-          </button>
-        </div>
+    <div className="w-full">
+      {/* Section Header */}
+      <div className="text-left mt-8 mb-4 border-b border-gray-300 pb-2">
+        <h2 className="text-2xl font-black text-gray-900">🏆 Leaderboard</h2>
+      </div>
 
+      {/* Background Container */}
+      <div className="bg-white border border-gray-200 p-6 shadow-sm">
         {/* Tab & Search Control */}
-        <div className="space-y-3 mb-4">
-          <div className="flex bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+        <div className="space-y-3 mb-6">
+          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
             <button
               type="button"
               onClick={() => setTab("level")}
-              className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${
+              className={`flex-1 py-2 text-xs font-black rounded-md transition-all ${
                 tab === "level"
-                  ? "bg-purple-600 text-white shadow-md"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-[#51b330] text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
               }`}
             >
               ⭐ TOP LEVEL
@@ -152,10 +123,10 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
             <button
               type="button"
               onClick={() => setTab("streak")}
-              className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${
+              className={`flex-1 py-2 text-xs font-black rounded-md transition-all ${
                 tab === "streak"
-                  ? "bg-purple-600 text-white shadow-md"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-[#51b330] text-white shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
               }`}
             >
               🔥 TOP STREAK
@@ -166,16 +137,16 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
           <div className="relative">
             <input
               type="text"
-              placeholder="🔍 Cari username atau UID pemain..."
+              placeholder="Cari username atau UID pemain..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+              className="w-full bg-white border-2 border-[#1e720f]/30 rounded-sm px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#053b05] focus:border-[#1e720f] transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-2.5 text-xs text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700"
               >
                 ✕
               </button>
@@ -184,7 +155,7 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
         </div>
 
         {/* List Leaderboard */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
           {loading ? (
             <div className="py-12 text-center text-gray-400 text-sm animate-pulse">
               Memuat peringkat...
@@ -200,17 +171,17 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
               <div
                 key={player.id || index}
                 onClick={() => onViewPlayer && onViewPlayer(player.id)}
-                className="flex items-center justify-between p-3 bg-slate-800/60 border border-slate-700/50 rounded-xl hover:border-slate-600 hover:bg-slate-800 cursor-pointer transition-all"
+                className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-[#51b330] hover:bg-green-50/50 cursor-pointer transition-all"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-base font-bold w-6 text-center">
+                  <span className="text-base font-bold w-6 text-center text-gray-700">
                     {getRankBadge(index)}
                   </span>
                   <div>
-                    <p className="font-bold text-sm text-slate-100">
+                    <p className="font-bold text-sm text-gray-900">
                       {player.username}
                     </p>
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[11px] text-gray-500">
                       Lv. {player.level || 1} ·{" "}
                       {formatLastSeen(player.last_login)}
                     </p>
@@ -218,11 +189,11 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
                 </div>
                 <div className="text-right">
                   {tab === "level" ? (
-                    <span className="text-xs font-black text-amber-400">
+                    <span className="text-xs font-black text-[#1e720f] bg-green-50 border border-green-200 px-2.5 py-1 rounded-md">
                       {player.exp || 0} EXP
                     </span>
                   ) : (
-                    <span className="text-xs font-black text-orange-400">
+                    <span className="text-xs font-black text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-md">
                       🔥 {player.max_streak || 0} Hari
                     </span>
                   )}
@@ -234,6 +205,6 @@ function LeaderboardOverlay({ isOpen, onClose, onViewPlayer }) {
       </div>
     </div>
   );
-}
+};
 
-export default LeaderboardOverlay;
+export default LeaderboardSection;

@@ -7,11 +7,10 @@ import UserProfile from "./components/UserProfileSection";
 import QuestSection from "./components/QuestSection";
 import Inventory from "./components/InventorySection";
 import ItemIndex from "./components/ItemIndex";
-import LeaderboardModal from "./components/LeaderboardModal";
 import Sidebar from "./components/Sidebar";
-import ShopOverlay from "./components/ShopOverlay";
+import ShopSection from "./components/ShopSection";
 import BannerOverlay from "./components/BannerOverlay";
-import LeaderboardOverlay from "./components/LeaderboardOverlay";
+import LeaderboardSection from "./components/LearderboardSection";
 import HabitHeatmap from "./components/HabitHeatmap";
 import GachaOverlay from "./components/GachaOverlay";
 import { playSound } from "./utils/soundEngine";
@@ -22,6 +21,10 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ShowcaseModal from "./components/ShowcaseModal";
 import NotificationOverlay from "./components/NotificationOverlay";
+
+import Dropdown from "./assets/icons/down.svg?react";
+import GachaIcon from "./assets/icons/stars.svg?react";
+import GemIcon from "./assets/icons/gem.svg?react";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -147,13 +150,23 @@ function App() {
   const rollTimeoutRef = useRef(null);
   const skipRef = useRef(false);
   const deletedHabitRef = useRef(null);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
-  const [showShop, setShowShop] = useState(false);
   const [isRevealing, setIsRevealing] = useState(false);
   const [showShowcase, setShowShowcase] = useState(false);
   const [viewingPlayer, setViewingPlayer] = useState(null);
-  const [activeTab, setActiveTab] = useState("quests"); // "quests" | "heatmap" | "inventory"
+  const [activeTab, setActiveTab] = useState("quests");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -742,7 +755,6 @@ function App() {
     });
   };
 
-  // handler buat nutup card
   const closeViewingPlayer = () => setViewingPlayer(null);
 
   // bentuk data biar sesuai shape yang ShowcaseModal harapin
@@ -779,47 +791,29 @@ function App() {
         )}
 
         {/*  TOP NAVIGATION HEADER - FULL WIDTH */}
-        <header className="w-full bg-[#1e720f] shadow-xl relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-stretch justify-between gap-4 flex-wrap sm:flex-nowrap">
-            {/* SISI KIRI: Profile Kotak + Tabs Placeholder */}
+        <header className="w-full bg-[#1e720f]/80 shadow-xl relative z-30">
+          <div className="max-w-8xl mx-auto px-4 sm:px-6 flex items-stretch justify-between gap-4 flex-wrap sm:flex-nowrap">
+            {/* SISI KIRI: Title + Tabs */}
             <div className="flex items-stretch gap-4 min-w-0">
-              {/* Profile - dikecilkan jadi kotak */}
-              <div className="flex items-center gap-2 shrink-0 py-3">
-                <div className="w-9 h-9 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 border border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
-                  <span className="text-[6px] font-bold text-purple-200 uppercase leading-none">
-                    Lv
-                  </span>
-                  <span className="font-black text-[11px] text-white leading-none">
-                    {userData?.level || 1}
-                  </span>
-                </div>
-                <div className="min-w-0 hidden sm:block">
-                  <h2
-                    className={`font-black text-sm truncate leading-tight ${nameTagStyle}`}
-                  >
-                    {userData?.username || "Player"}
-                  </h2>
-                  <p className="text-[9px] text-gray-400 font-semibold truncate leading-tight">
-                    {userData?.exp || 0}/100 EXP
-                  </p>
-                </div>
+              {/* Title */}
+              <div className="flex items-center py-3 shrink-0">
+                <h1 className="text-lg font-black text-white tracking-wider cursor-pointer select-none">
+                  Gambit
+                </h1>
               </div>
-
-              {/* Divider */}
-              <div className="hidden md:block w-px bg-gray-700 shrink-0 my-3" />
 
               {/* Tabs Placeholder - edit sesuai kebutuhan */}
               <nav className="hidden md:flex items-stretch gap-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => setActiveTab("quests")}
-                  className={`relative flex items-center px-3 text-xs text-white font-bold transition-colors ${
+                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
                     activeTab === "quests" ? "" : "hover:bg-[#51b330]"
                   }`}
                 >
                   Quests
                   <span
-                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
                       activeTab === "quests" ? "bg-[#7ad950]" : "bg-transparent"
                     }`}
                   />
@@ -828,7 +822,7 @@ function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("heatmap")}
-                  className={`relative flex items-center px-3 text-xs text-white font-bold transition-colors ${
+                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
                     activeTab === "heatmap" ? "" : "hover:bg-[#51b330]"
                   }`}
                 >
@@ -845,7 +839,7 @@ function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("inventory")}
-                  className={`relative flex items-center px-3 text-xs text-white font-bold transition-colors ${
+                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
                     activeTab === "inventory" ? "" : "hover:bg-[#51b330]"
                   }`}
                 >
@@ -858,58 +852,141 @@ function App() {
                     }`}
                   />
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("leaderboard")}
+                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
+                    activeTab === "leaderboard" ? "" : "hover:bg-[#51b330]"
+                  }`}
+                >
+                  Leaderboard
+                  <span
+                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                      activeTab === "leaderboard"
+                        ? "bg-[#7ad950]"
+                        : "bg-transparent"
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("shop")}
+                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
+                    activeTab === "shop" ? "" : "hover:bg-[#51b330]"
+                  }`}
+                >
+                  Shop
+                  <span
+                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                      activeTab === "shop" ? "bg-[#7ad950]" : "bg-transparent"
+                    }`}
+                  />
+                </button>
               </nav>
             </div>
 
-            {/* SISI KANAN: Gems & Action Buttons */}
-            <div className="flex items-center gap-3 shrink-0 py-3">
-              <div className="flex items-center gap-1.5 bg-gray-800/80 px-3 py-1.5 rounded-xl border border-gray-700">
-                <span className="text-sm">💎</span>
-                <span className="text-sm font-black text-white">
+            {/* SISI KANAN: Gems, Action Buttons, Menu, Profile */}
+            <div className="flex items-center gap-6 shrink-0 py-3">
+              <div className="flex items-center gap-1.5 px-3 py-1.5">
+                <GemIcon className="w-5 h-5 text-yellow-400" />
+                <span className="text-md font-black text-white">
                   {userData?.gems || 0}
                 </span>
               </div>
 
+              {/* Gacha Icon - berdiri sendiri, ada jarak lega dari grup dropdown+profile */}
+              <button
+                type="button"
+                onClick={() => setShowBanner(true)}
+                className="flex items-center justify-center transition-all active:scale-95 cursor-pointer text-sm"
+                title="Gacha Banner"
+              >
+                <GachaIcon className="w-7 h-7 text-white hover:text-gray-300 transition-colors" />
+              </button>
+
+              {/* Grup Dropdown Menu + Profile - dirapatkan karena saling terkait */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowLeaderboard(true)}
-                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
-                  title="Leaderboard"
-                >
-                  🏆
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBanner(true)}
-                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
-                  title="Gacha Banner"
-                >
-                  ✨
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowShop(true)}
-                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
-                  title="Shop"
-                >
-                  🛒
-                </button>
+                {/* DROPDOWN MENU (titik tiga) */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((prev) => !prev)}
+                    className="flex items-center justify-center transition-all active:scale-95 cursor-pointer text-sm"
+                    aria-label="Menu"
+                  >
+                    <Dropdown className="w-6 h-5 text-white hover:text-gray-300 transition-colors" />
+                  </button>
+
+                  {menuOpen && (
+                    <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-gray-200 shadow-xl overflow-hidden z-10 animate-fade-in">
+                      {/* Item biasa — copy-paste blok ini buat nambah menu lain */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          // aksi kamu di sini
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-[#7ad950]/20 transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        Settings
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          // aksi kamu di sini
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-[#7ad950]/20 transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        Help
+                      </button>
+
+                      {/* Divider — opsional, buat misahin aksi destruktif */}
+                      <div className="border-t border-gray-200" />
+
+                      {/* Logout */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          supabase.auth.signOut();
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-[#7ad950]/20 transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Profile - dekat dengan dropdown */}
                 <button
                   type="button"
                   onClick={() => setShowShowcase(true)}
-                  className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-all active:scale-95 text-sm"
-                  title="Player Card"
+                  title="Lihat Player Card"
+                  className="flex items-center gap-2 shrink-0 cursor-pointer"
                 >
-                  🎴
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => supabase.auth.signOut()}
-                  className="px-3 py-2 text-xs font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-xl transition-all active:scale-95"
-                >
-                  Sign Out
+                  <div className="min-w-0 hidden sm:block text-left">
+                    <h2
+                      className={`font-black text-md truncate leading-tight ${nameTagStyle}`}
+                    >
+                      {userData?.username || "Player"}
+                    </h2>
+                    <p className="text-[9px] text-gray-400 font-semibold truncate leading-tight">
+                      {userData?.exp || 0}/100 EXP
+                    </p>
+                  </div>
+                  <div className="w-9 h-9 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 border border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                    <span className="text-[6px] font-bold text-purple-200 uppercase leading-none">
+                      Lv
+                    </span>
+                    <span className="font-black text-[11px] text-white leading-none">
+                      {userData?.level || 1}
+                    </span>
+                  </div>
                 </button>
               </div>
             </div>
@@ -961,6 +1038,25 @@ function App() {
                   isDarkMode={isDarkMode}
                 />
               )}
+
+              {activeTab === "leaderboard" && (
+                <LeaderboardSection onViewPlayer={handleViewPlayer} />
+              )}
+
+              {activeTab === "shop" && (
+                <ShopSection
+                  apiUrl={API_URL}
+                  authFetch={authFetch}
+                  userData={userData}
+                  onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
+                  onBuyTicket={() => {
+                    rollGacha({
+                      endpoint: "/api/shop/buy-ticket",
+                      requireGems: false,
+                    });
+                  }}
+                />
+              )}
             </main>
           </div>
         </div>
@@ -970,11 +1066,6 @@ function App() {
       <div className="w-full bg-white h-4 sm:h-6 shrink-0" />
 
       {/* MODALS & OVERLAYS */}
-      <LeaderboardOverlay
-        isOpen={showLeaderboard}
-        onClose={() => setShowLeaderboard(false)}
-        onViewPlayer={handleViewPlayer}
-      />
       <NotificationOverlay notifications={notifications} />
       {viewingPlayer && (
         <ShowcaseModal
@@ -991,17 +1082,6 @@ function App() {
         isRolling={isRolling}
         userData={userData}
         apiUrl={API_URL}
-      />
-      <ShopOverlay
-        isOpen={showShop}
-        onClose={() => setShowShop(false)}
-        apiUrl={API_URL}
-        authFetch={authFetch}
-        userData={userData}
-        onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
-        onBuyTicket={() => {
-          rollGacha({ endpoint: "/api/shop/buy-ticket", requireGems: false });
-        }}
       />
       {showItemIndex && (
         <ItemIndex

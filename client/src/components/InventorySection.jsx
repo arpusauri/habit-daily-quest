@@ -19,111 +19,276 @@ const Inventory = ({
     ? userData.inventory
     : [];
 
+  // ─────────────────────────────────────────────────────────
+  // THEME CONFIG - tambahin key baru di sini (misal "wireframe")
+  // buat bikin varian tema baru tanpa nyentuh JSX di bawah
+  // ─────────────────────────────────────────────────────────
+  const themeConfig = {
+    matrix: {
+      headerBorderClass: "border-green-600/30",
+      title: "INVENTORY_CACHE",
+      titleClass:
+        "text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]",
+      itemIndexButtonClass:
+        "bg-green-950/40 text-green-400 border border-green-400 hover:bg-green-400 hover:text-black font-mono",
+      filterContainerClass: "bg-black border-green-600/30",
+      filterActiveClass:
+        "bg-green-500 text-black shadow-md border border-green-400 font-mono",
+      filterInactiveClass: "text-green-600 hover:text-green-300 font-mono",
+      emptyStateClass:
+        "text-green-600 bg-black border-green-600/30 font-mono not-italic",
+      emptyStateText: "> NO_DATA_FOUND. Selesaikan mission dulu.",
+      categoryCardClass: "bg-black border-green-600/30",
+      categoryLabelClass: "text-green-400 border-green-500 font-mono",
+      itemNameClass: "text-green-300",
+      itemCardClass:
+        "bg-black border-green-600/40 text-green-400 hover:border-green-400 font-mono",
+      rankBadgeClass: () =>
+        "text-green-400 bg-green-400/10 border-green-500/30 font-mono",
+      bannerBadgeClass: (type) =>
+        type === "LIMITED"
+          ? "bg-green-400 text-black border-green-400 font-mono shadow-[0_0_5px_rgba(74,222,128,0.4)]"
+          : "bg-green-950/20 text-green-500 border-green-700/50 font-mono",
+      bannerBadgeText: (type) =>
+        type === "LIMITED" ? "◆ LIMITED" : "▤ STANDARD",
+      exclusiveBadgeClass:
+        "text-green-300 bg-green-400/10 border-green-500/30 font-mono",
+      equipButtonClass: (isEquipped) =>
+        isEquipped
+          ? "bg-green-950/40 text-green-400 border border-green-500/50 hover:bg-red-950/40 hover:text-red-400 hover:border-red-500/50 active:scale-95 font-mono"
+          : "bg-green-900/30 text-green-400 border border-green-400 hover:bg-green-400 hover:text-black active:scale-95 font-mono",
+      equipButtonText: (isEquipped) => (isEquipped ? "[UNEQUIP]" : "[EQUIP]"),
+    },
+    aurora: {
+      headerBorderClass: "border-purple-800/40",
+      title: "Inventory",
+      titleClass: "text-fuchsia-100",
+      itemIndexButtonClass:
+        "bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white",
+      filterContainerClass: "bg-indigo-950/60 border-purple-800/40",
+      filterActiveClass:
+        "bg-fuchsia-600 text-white shadow-md border border-fuchsia-500",
+      filterInactiveClass: "text-purple-300 hover:text-white",
+      emptyStateClass: "text-purple-300 bg-indigo-950/30 border-purple-800/40",
+      emptyStateText: "Inventory kamu masih kosong. Yuk pull banner gacha! 🎰",
+      categoryCardClass: "bg-indigo-950/40 border-purple-800/40",
+      categoryLabelClass: "text-fuchsia-300 border-fuchsia-500",
+      itemNameClass: "",
+      itemCardClass:
+        "bg-indigo-900/40 border-purple-700/40 text-white hover:border-fuchsia-500/50",
+      rankBadgeClass: (rank) =>
+        rank === "SSR"
+          ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"
+          : rank === "SR"
+            ? "text-purple-400 bg-purple-400/10 border-purple-500/20"
+            : "text-green-400 bg-green-400/10 border-green-500/20",
+      bannerBadgeClass: (type) =>
+        type === "LIMITED"
+          ? "text-blue-400 bg-blue-400/10 border-blue-500/20"
+          : "text-orange-400 bg-orange-400/10 border-orange-500/30",
+      bannerBadgeText: (type) => `${type === "LIMITED" ? "🔹" : "🎫"} ${type}`,
+      exclusiveBadgeClass:
+        "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20",
+      equipButtonClass: (isEquipped) =>
+        isEquipped
+          ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 active:scale-95"
+          : "bg-fuchsia-600 text-white hover:bg-fuchsia-500 active:scale-95 shadow-sm",
+      equipButtonText: (isEquipped) => (isEquipped ? "Unequip" : "Equip"),
+    },
+    starforge: {
+      headerBorderClass: "border-amber-700/40",
+      title: "Inventory",
+      titleClass: "text-amber-100",
+      itemIndexButtonClass:
+        "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black",
+      filterContainerClass: "bg-slate-900/60 border-amber-700/40",
+      filterActiveClass:
+        "bg-amber-500 text-black shadow-md border border-amber-400",
+      filterInactiveClass: "text-amber-300/70 hover:text-amber-100",
+      emptyStateClass: "text-amber-300/80 bg-slate-900/40 border-amber-700/40",
+      emptyStateText: "Inventory kamu masih kosong. Yuk pull banner gacha! 🎰",
+      categoryCardClass: "bg-slate-900/40 border-amber-700/30",
+      categoryLabelClass: "text-amber-300 border-amber-500",
+      itemNameClass: "",
+      itemCardClass:
+        "bg-slate-800/60 border-amber-700/40 text-amber-50 hover:border-yellow-500/50",
+      rankBadgeClass: (rank) =>
+        rank === "SSR"
+          ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"
+          : rank === "SR"
+            ? "text-purple-400 bg-purple-400/10 border-purple-500/20"
+            : "text-green-400 bg-green-400/10 border-green-500/20",
+      bannerBadgeClass: (type) =>
+        type === "LIMITED"
+          ? "text-blue-400 bg-blue-400/10 border-blue-500/20"
+          : "text-orange-400 bg-orange-400/10 border-orange-500/30",
+      bannerBadgeText: (type) => `${type === "LIMITED" ? "🔹" : "🎫"} ${type}`,
+      exclusiveBadgeClass:
+        "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20",
+      equipButtonClass: (isEquipped) =>
+        isEquipped
+          ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 active:scale-95"
+          : "bg-amber-500 text-black hover:bg-amber-400 active:scale-95 shadow-sm",
+      equipButtonText: (isEquipped) => (isEquipped ? "Unequip" : "Equip"),
+    },
+    notepad: {
+      headerBorderClass: "border-stone-200",
+      title: "Inventory",
+      titleClass: "text-stone-800",
+      itemIndexButtonClass: "bg-orange-500 hover:bg-orange-600 text-white",
+      filterContainerClass: "bg-amber-50 border-stone-200",
+      filterActiveClass:
+        "bg-orange-500 text-white shadow-md border border-orange-500",
+      filterInactiveClass: "text-stone-400 hover:text-stone-700",
+      emptyStateClass: "text-stone-400 bg-white border-stone-200",
+      emptyStateText: "Inventory kamu masih kosong. Yuk pull banner gacha! 🎰",
+      categoryCardClass: "bg-white border-stone-200",
+      categoryLabelClass: "text-orange-600 border-orange-400",
+      itemNameClass: "",
+      itemCardClass:
+        "bg-amber-50/40 border-stone-200 text-stone-800 hover:border-orange-300",
+      rankBadgeClass: (rank) =>
+        rank === "SSR"
+          ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"
+          : rank === "SR"
+            ? "text-purple-400 bg-purple-400/10 border-purple-500/20"
+            : "text-green-400 bg-green-400/10 border-green-500/20",
+      bannerBadgeClass: (type) =>
+        type === "LIMITED"
+          ? "text-blue-400 bg-blue-400/10 border-blue-500/20"
+          : "text-orange-400 bg-orange-400/10 border-orange-500/30",
+      bannerBadgeText: (type) => `${type === "LIMITED" ? "🔹" : "🎫"} ${type}`,
+      exclusiveBadgeClass:
+        "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20",
+      equipButtonClass: (isEquipped) =>
+        isEquipped
+          ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 active:scale-95"
+          : "bg-orange-500 text-white hover:bg-orange-600 active:scale-95 shadow-sm",
+      equipButtonText: (isEquipped) => (isEquipped ? "Unequip" : "Equip"),
+    },
+    dark: {
+      headerBorderClass: "border-gray-800",
+      title: "Inventory",
+      titleClass: "text-white",
+      itemIndexButtonClass: "bg-indigo-600 hover:bg-indigo-500 text-white",
+      filterContainerClass: "bg-gray-900/60 border-gray-800",
+      filterActiveClass:
+        "bg-indigo-600 text-white shadow-md border border-indigo-500",
+      filterInactiveClass: "text-gray-400 hover:text-white",
+      emptyStateClass: "text-gray-400 bg-gray-50 border-gray-300",
+      emptyStateText: "Inventory kamu masih kosong. Yuk pull banner gacha! 🎰",
+      categoryCardClass: "bg-gray-900/40 border-gray-800/80",
+      categoryLabelClass: "text-indigo-400 border-indigo-500",
+      itemNameClass: "",
+      itemCardClass:
+        "bg-gray-800/80 border-gray-700/50 text-white hover:border-gray-600",
+      rankBadgeClass: (rank) =>
+        rank === "SSR"
+          ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"
+          : rank === "SR"
+            ? "text-purple-400 bg-purple-400/10 border-purple-500/20"
+            : "text-green-400 bg-green-400/10 border-green-500/20",
+      bannerBadgeClass: (type) =>
+        type === "LIMITED"
+          ? "text-blue-400 bg-blue-400/10 border-blue-500/20"
+          : "text-orange-400 bg-orange-400/10 border-orange-500/30",
+      bannerBadgeText: (type) => `${type === "LIMITED" ? "🔹" : "🎫"} ${type}`,
+      exclusiveBadgeClass:
+        "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20",
+      equipButtonClass: (isEquipped) =>
+        isEquipped
+          ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 active:scale-95"
+          : "bg-blue-600 text-white hover:bg-blue-500 active:scale-95 shadow-sm",
+      equipButtonText: (isEquipped) => (isEquipped ? "Unequip" : "Equip"),
+    },
+    // ─────────────────────────────────────────────────────
+    // DEFAULT - mengikuti visual LeaderboardSection (hijau)
+    // ganti key ini jadi "wireframe" (dan bikin key baru
+    // "light" terpisah) kalau nanti mau pisah 2 varian
+    // ─────────────────────────────────────────────────────
+    light: {
+      headerBorderClass: "border-gray-300",
+      title: "Inventory",
+      titleClass: "text-gray-900",
+      itemIndexButtonClass:
+        "border border-gray-900 text-gray-900 bg-white hover:bg-gray-900 hover:text-white",
+      filterContainerClass: "bg-gray-100 border border-gray-200",
+      filterActiveClass: "bg-[#51b330] text-white shadow-sm",
+      filterInactiveClass: "text-gray-500 hover:text-gray-900",
+      emptyStateClass: "text-gray-400 bg-gray-50 border-gray-300",
+      emptyStateText: "Inventory kamu masih kosong. Yuk pull banner gacha! 🎰",
+      categoryCardClass: "bg-white border-gray-200 shadow-sm",
+      categoryLabelClass: "text-gray-500 border-[#51b330]",
+      itemNameClass: "text-gray-900",
+      itemCardClass:
+        "bg-white border-gray-200 text-gray-900 hover:border-[#51b330] hover:bg-green-50/50",
+      rankBadgeClass: (rank) =>
+        rank === "SSR"
+          ? "text-[#1e720f] bg-green-50 border-green-200"
+          : rank === "SR"
+            ? "text-purple-600 bg-purple-50 border-purple-200"
+            : "text-gray-600 bg-gray-50 border-gray-200",
+      bannerBadgeClass: (type) =>
+        type === "LIMITED"
+          ? "text-blue-600 bg-blue-50 border-blue-200"
+          : "text-orange-600 bg-orange-50 border-orange-200",
+      bannerBadgeText: (type) => `${type === "LIMITED" ? "🔹" : "🎫"} ${type}`,
+      exclusiveBadgeClass: "text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200",
+      equipButtonClass: (isEquipped) =>
+        isEquipped
+          ? "bg-white text-red-600 border border-red-200 hover:bg-red-50 active:scale-95"
+          : "bg-[#51b330] text-white hover:bg-[#409228] active:scale-95 shadow-sm",
+      equipButtonText: (isEquipped) => (isEquipped ? "Unequip" : "Equip"),
+    },
+  };
+
+  const getTheme = () => {
+    if (isMatrixMode) return themeConfig.matrix;
+    if (isAuroraMode) return themeConfig.aurora;
+    if (isStarforgeMode) return themeConfig.starforge;
+    if (isNotepadMode) return themeConfig.notepad;
+    if (isDarkMode) return themeConfig.dark;
+    return themeConfig.light;
+  };
+
+  const theme = getTheme();
+
   return (
     <div className="w-full mt-8">
       {/* HEADER & FILTER ROW */}
       <div
-        className={`w-full min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b ${
-          isMatrixMode
-            ? "border-green-600/30"
-            : isAuroraMode
-              ? "border-purple-800/40"
-              : isStarforgeMode
-                ? "border-amber-700/40"
-                : isNotepadMode
-                  ? "border-stone-200"
-                  : isDarkMode
-                    ? "border-gray-800"
-                    : "border-gray-200"
-        }`}
+        className={`w-full min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b ${theme.headerBorderClass}`}
       >
         <div className="flex items-center gap-3 min-w-0">
           <h2
-            className={`text-xl font-bold tracking-wide truncate ${
-              isMatrixMode
-                ? "text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]"
-                : isAuroraMode
-                  ? "text-fuchsia-100"
-                  : isStarforgeMode
-                    ? "text-amber-100"
-                    : isNotepadMode
-                      ? "text-stone-800"
-                      : isDarkMode
-                        ? "text-white"
-                        : "text-gray-900"
-            }`}
+            className={`text-xl font-bold tracking-wide truncate ${theme.titleClass}`}
           >
-            {isMatrixMode ? "INVENTORY_CACHE" : "Inventory"} (
-            {userInventory.length})
+            {theme.title} ({userInventory.length})
           </h2>
           <button
             type="button"
             onClick={() => setShowItemIndex(true)}
-            className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-md flex items-center gap-1 active:scale-95 whitespace-nowrap shrink-0 ${
-              isMatrixMode
-                ? "bg-green-950/40 text-green-400 border border-green-400 hover:bg-green-400 hover:text-black font-mono"
-                : isAuroraMode
-                  ? "bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white"
-                  : isStarforgeMode
-                    ? "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black"
-                    : isNotepadMode
-                      ? "bg-orange-500 hover:bg-orange-600 text-white"
-                      : isDarkMode
-                        ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-                        : "border border-gray-900 text-gray-900 bg-white hover:bg-gray-900 hover:text-white"
-            }`}
+            className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all shadow-md flex items-center gap-1 active:scale-95 whitespace-nowrap shrink-0 ${theme.itemIndexButtonClass}`}
           >
             Item Index
           </button>
         </div>
 
         <div
-          className={`flex gap-1 p-1 rounded-xl border self-start sm:self-auto ${
-            isMatrixMode
-              ? "bg-black border-green-600/30"
-              : isAuroraMode
-                ? "bg-indigo-950/60 border-purple-800/40"
-                : isStarforgeMode
-                  ? "bg-slate-900/60 border-amber-700/40"
-                  : isNotepadMode
-                    ? "bg-amber-50 border-stone-200"
-                    : isDarkMode
-                      ? "bg-gray-900/60 border-gray-800"
-                      : "bg-white border-gray-300"
-          }`}
+          className={`flex gap-1 p-1 rounded-lg self-start sm:self-auto ${theme.filterContainerClass}`}
         >
           {["ALL", "R", "SR", "SSR"].map((rarity) => (
             <button
               key={`header-${rarity}`}
               type="button"
               onClick={() => setSelectedRarityFilter(rarity)}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              className={`px-3 py-1 text-xs font-bold rounded-md transition-all whitespace-nowrap shrink-0 ${
                 selectedRarityFilter === rarity
-                  ? isMatrixMode
-                    ? "bg-green-500 text-black shadow-md border border-green-400 font-mono"
-                    : isAuroraMode
-                      ? "bg-fuchsia-600 text-white shadow-md border border-fuchsia-500"
-                      : isStarforgeMode
-                        ? "bg-amber-500 text-black shadow-md border border-amber-400"
-                        : isNotepadMode
-                          ? "bg-orange-500 text-white shadow-md border border-orange-500"
-                          : isDarkMode
-                            ? "bg-indigo-600 text-white shadow-md border border-indigo-500"
-                            : "bg-gray-900 text-white shadow-md border border-gray-900"
-                  : isMatrixMode
-                    ? "text-green-600 hover:text-green-300 font-mono"
-                    : isAuroraMode
-                      ? "text-purple-300 hover:text-white"
-                      : isStarforgeMode
-                        ? "text-amber-300/70 hover:text-amber-100"
-                        : isNotepadMode
-                          ? "text-stone-400 hover:text-stone-700"
-                          : isDarkMode
-                            ? "text-gray-400 hover:text-white"
-                            : "text-gray-400 hover:text-gray-900"
+                  ? theme.filterActiveClass
+                  : theme.filterInactiveClass
               }`}
             >
-              {rarity === "ALL" ? "ALL" : rarity}
+              {rarity}
             </button>
           ))}
         </div>
@@ -133,21 +298,9 @@ const Inventory = ({
       <div className="w-full space-y-6">
         {userInventory.length === 0 ? (
           <p
-            className={`italic text-center py-8 rounded-2xl border ${
-              isMatrixMode
-                ? "text-green-600 bg-black border-green-600/30 font-mono not-italic"
-                : isAuroraMode
-                  ? "text-purple-300 bg-indigo-950/30 border-purple-800/40"
-                  : isStarforgeMode
-                    ? "text-amber-300/80 bg-slate-900/40 border-amber-700/40"
-                    : isNotepadMode
-                      ? "text-stone-400 bg-white border-stone-200"
-                      : "text-gray-400 bg-gray-50 border-gray-300"
-            }`}
+            className={`italic text-center py-8 rounded-lg border ${theme.emptyStateClass}`}
           >
-            {isMatrixMode
-              ? "> NO_DATA_FOUND. Selesaikan mission dulu."
-              : "Inventory kamu masih kosong. Yuk pull banner gacha! 🎰"}
+            {theme.emptyStateText}
           </p>
         ) : (
           (() => {
@@ -190,19 +343,7 @@ const Inventory = ({
 
             if (totalVisible === 0) {
               return (
-                <p
-                  className={`italic text-center py-6 ${
-                    isMatrixMode
-                      ? "text-green-600 font-mono not-italic"
-                      : isAuroraMode
-                        ? "text-purple-300"
-                        : isStarforgeMode
-                          ? "text-amber-300/80"
-                          : isNotepadMode
-                            ? "text-stone-400"
-                            : "text-gray-400"
-                  }`}
-                >
+                <p className="italic text-center py-6 text-gray-400">
                   Tidak ada item {selectedRarityFilter} yang sudah dimiliki.
                 </p>
               );
@@ -219,34 +360,10 @@ const Inventory = ({
               return (
                 <div
                   key={cat.id}
-                  className={`p-5 rounded-2xl border shadow-sm text-left ${
-                    isMatrixMode
-                      ? "bg-black border-green-600/30"
-                      : isAuroraMode
-                        ? "bg-indigo-950/40 border-purple-800/40"
-                        : isStarforgeMode
-                          ? "bg-slate-900/40 border-amber-700/30"
-                          : isNotepadMode
-                            ? "bg-white border-stone-200"
-                            : isDarkMode
-                              ? "bg-gray-900/40 border-gray-800/80"
-                              : "bg-white border-gray-200"
-                  }`}
+                  className={`p-5 rounded-lg border text-left ${theme.categoryCardClass}`}
                 >
                   <h4
-                    className={`text-xs font-black uppercase tracking-widest mb-4 border-l-4 pl-2 ${
-                      isMatrixMode
-                        ? "text-green-400 border-green-500 font-mono"
-                        : isAuroraMode
-                          ? "text-fuchsia-300 border-fuchsia-500"
-                          : isStarforgeMode
-                            ? "text-amber-300 border-amber-500"
-                            : isNotepadMode
-                              ? "text-orange-600 border-orange-400"
-                              : isDarkMode
-                                ? "text-indigo-400 border-indigo-500"
-                                : "text-gray-500 border-gray-900"
-                    }`}
+                    className={`text-xs font-black uppercase tracking-widest mb-4 border-l-4 pl-2 ${theme.categoryLabelClass}`}
                   >
                     {cat.label}
                   </h4>
@@ -281,13 +398,11 @@ const Inventory = ({
                         ssr_notepad: "SSR",
                       };
 
-                      // Konfigurasi tipe Banner/Tipe Item
                       const BANNER_TYPE = {
                         ssr_matrix: "LIMITED",
                         ssr_starforge: "STANDARD",
                         ssr_notepad: "STANDARD",
                         shop_crown: "LIMITED",
-                        // Anda bisa menambahkan item lain ke sini
                       };
 
                       const rank =
@@ -298,83 +413,40 @@ const Inventory = ({
                             ? "SR"
                             : "R");
 
-                      const bannerType = BANNER_TYPE[itemId]; // Cek apakah item ini LIMITED / STANDARD
-
-                      // ===== PERUBAHAN DI SINI: R Rank Menjadi Hijau =====
-                      const rankBadgeClass = isMatrixMode
-                        ? "text-green-400 bg-green-400/10 border-green-500/30 font-mono"
-                        : rank === "SSR"
-                          ? "text-yellow-400 bg-yellow-400/10 border-yellow-500/20"
-                          : rank === "SR"
-                            ? "text-purple-400 bg-purple-400/10 border-purple-500/20"
-                            : "text-green-400 bg-green-400/10 border-green-500/20"; // R = Green
-
+                      const bannerType = BANNER_TYPE[itemId];
                       const isExclusive =
                         itemId === "shop_aurora" || itemId === "shop_crown";
 
                       return (
                         <div
                           key={itemId}
-                          className={`p-4 rounded-xl flex justify-between items-center shadow-md border transition-all ${
-                            isMatrixMode
-                              ? "bg-black border-green-600/40 text-green-400 hover:border-green-400 font-mono"
-                              : isAuroraMode
-                                ? "bg-indigo-900/40 border-purple-700/40 text-white hover:border-fuchsia-500/50"
-                                : isStarforgeMode
-                                  ? "bg-slate-800/60 border-amber-700/40 text-amber-50 hover:border-yellow-500/50"
-                                  : isNotepadMode
-                                    ? "bg-amber-50/40 border-stone-200 text-stone-800 hover:border-orange-300"
-                                    : isDarkMode
-                                      ? "bg-gray-800/80 border-gray-700/50 text-white hover:border-gray-600"
-                                      : "bg-white border-gray-300 text-gray-900 hover:border-gray-500"
-                          }`}
+                          className={`p-4 rounded-lg flex justify-between items-center shadow-sm border transition-all ${theme.itemCardClass}`}
                         >
                           <div className="flex flex-col items-start">
                             <span
-                              className={`text-sm font-semibold tracking-wide text-left ${
-                                isMatrixMode ? "text-green-300" : ""
-                              }`}
+                              className={`text-sm font-semibold tracking-wide text-left ${theme.itemNameClass}`}
                             >
                               {cleanName}
                             </span>
 
                             <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                              {/* Rarity Badge */}
                               <span
-                                className={`text-[9px] font-black px-2 py-0.5 rounded border ${rankBadgeClass}`}
+                                className={`text-[9px] font-black px-2 py-0.5 rounded border ${theme.rankBadgeClass(rank)}`}
                               >
                                 {rank} RANK
                               </span>
 
-                              {/* Banner Type Badge (LIMITED / STANDARD) */}
                               {bannerType && (
                                 <span
-                                  className={`text-[9px] font-black px-2 py-0.5 rounded border transition-all ${
-                                    isMatrixMode
-                                      ? bannerType === "LIMITED"
-                                        ? "bg-green-400 text-black border-green-400 font-mono shadow-[0_0_5px_rgba(74,222,128,0.4)]"
-                                        : "bg-green-950/20 text-green-500 border-green-700/50 font-mono"
-                                      : bannerType === "LIMITED"
-                                        ? "text-blue-400 bg-blue-400/10 border-blue-500/20"
-                                        : "text-orange-400 bg-orange-400/10 border-orange-500/30"
-                                  }`}
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded border transition-all ${theme.bannerBadgeClass(bannerType)}`}
                                 >
-                                  {isMatrixMode
-                                    ? bannerType === "LIMITED"
-                                      ? "◆ LIMITED"
-                                      : "▤ STANDARD"
-                                    : `${bannerType === "LIMITED" ? "🔹" : "🎫"} ${bannerType}`}
+                                  {theme.bannerBadgeText(bannerType)}
                                 </span>
                               )}
 
-                              {/* Exclusive Badge */}
                               {isExclusive && (
                                 <span
-                                  className={`text-[9px] font-black px-2 py-0.5 rounded border ${
-                                    isMatrixMode
-                                      ? "text-green-300 bg-green-400/10 border-green-500/30 font-mono"
-                                      : "text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-500/20"
-                                  }`}
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded border ${theme.exclusiveBadgeClass}`}
                                 >
                                   ✦ EXCLUSIVE
                                 </span>
@@ -389,31 +461,9 @@ const Inventory = ({
                                 ? unequipItem(itemId)
                                 : equipItem(itemId)
                             }
-                            className={`text-xs px-4 py-2 font-bold rounded-lg transition-all ${
-                              isEquipped
-                                ? isMatrixMode
-                                  ? "bg-green-950/40 text-green-400 border border-green-500/50 hover:bg-red-950/40 hover:text-red-400 hover:border-red-500/50 active:scale-95 font-mono"
-                                  : "bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 active:scale-95"
-                                : isMatrixMode
-                                  ? "bg-green-900/30 text-green-400 border border-green-400 hover:bg-green-400 hover:text-black active:scale-95 font-mono"
-                                  : isAuroraMode
-                                    ? "bg-fuchsia-600 text-white hover:bg-fuchsia-500 active:scale-95 shadow-sm"
-                                    : isStarforgeMode
-                                      ? "bg-amber-500 text-black hover:bg-amber-400 active:scale-95 shadow-sm"
-                                      : isNotepadMode
-                                        ? "bg-orange-500 text-white hover:bg-orange-600 active:scale-95 shadow-sm"
-                                        : isDarkMode
-                                          ? "bg-blue-600 text-white hover:bg-blue-500 active:scale-95 shadow-sm"
-                                          : "bg-gray-900 text-white hover:bg-gray-700 active:scale-95 shadow-sm"
-                            }`}
+                            className={`text-xs px-4 py-2 font-bold rounded-md transition-all ${theme.equipButtonClass(isEquipped)}`}
                           >
-                            {isEquipped
-                              ? isMatrixMode
-                                ? "[UNEQUIP]"
-                                : "Unequip"
-                              : isMatrixMode
-                                ? "[EQUIP]"
-                                : "Equip"}
+                            {theme.equipButtonText(isEquipped)}
                           </button>
                         </div>
                       );
