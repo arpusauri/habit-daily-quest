@@ -2,7 +2,7 @@ import React from "react";
 
 const LoadingScreen = () => {
   return (
-    <div className="fixed inset-0 bg-[#1e720f]/80 flex items-center justify-center z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-[#1e720f]/80 shadow-xl flex items-center justify-center z-50 overflow-hidden">
       <style>{`
         @keyframes gambit-loading-bar {
           0% { transform: translateX(-100%); }

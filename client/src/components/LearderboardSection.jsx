@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 
+import LeftArrowIcon from "../assets/icons/left-arrow.svg?react";
+import RightArrowIcon from "../assets/icons/right-arrow.svg?react";
+
 const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
   const [tab, setTab] = useState("level"); // 'level' | 'streak'
   const [leaderboard, setLeaderboard] = useState([]);
@@ -12,14 +15,8 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
   const ITEMS_PER_PAGE = 10;
   const [hasNextPage, setHasNextPage] = useState(true);
 
+  // 1. Buat referensi untuk bagian atas list
   const listTopRef = useRef(null);
-
-  // 2. Efek untuk auto-scroll setiap kali 'page' berubah
-  useEffect(() => {
-    if (listTopRef.current) {
-      listTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [page]);
 
   // State untuk Peringkat Asli
   const [myRank, setMyRank] = useState("...");
@@ -182,7 +179,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
           <div className="relative mb-6">
             <input
               type="text"
-              placeholder="Cari username / UID..."
+              placeholder="Search Username / UID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border-2 border-[#1e720f]/30 rounded-sm px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#053b05] focus:border-[#1e720f] transition-colors"
@@ -273,9 +270,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
                 <h3 className="text-lg font-black text-gray-900">
                   {tab === "level" ? "Top Level" : "Top Streak"}
                 </h3>
-                <span className="text-xs font-bold text-gray-500 bg-gray-100 rounded-full px-2.5 py-0.5">
-                  Page {page}
-                </span>
               </div>
 
               {loading ? (
@@ -336,20 +330,49 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
 
                   {/* KONTROL PAGING */}
                   {!searchQuery && (
-                    <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-center gap-4 pt-6 mt-4 border-t border-gray-100">
                       <button
                         disabled={page === 1}
-                        onClick={() => setPage((p) => p - 1)}
-                        className="text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed px-4 py-2 rounded-md transition-colors"
+                        aria-label="Previous Page"
+                        onClick={() => {
+                          setPage((p) => p - 1);
+                          setTimeout(() => {
+                            if (listTopRef.current) {
+                              listTopRef.current.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }
+                          }, 100);
+                        }}
+                        // p-3 membuat tombol lebih kotak dan area klik membesar (~44px)
+                        className="flex items-center justify-center text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed p-3 rounded-lg transition-colors"
                       >
-                        ← Prev
+                        <LeftArrowIcon className="w-4 h-4" />
                       </button>
+
+                      {/* Indikator Halaman (Memberi feedback visual ke user) */}
+                      <span className="text-sm font-bold text-gray-400 min-w-[3rem] text-center">
+                        {page}
+                      </span>
+
                       <button
                         disabled={!hasNextPage}
-                        onClick={() => setPage((p) => p + 1)}
-                        className="text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed px-4 py-2 rounded-md transition-colors"
+                        aria-label="Next Page"
+                        onClick={() => {
+                          setPage((p) => p + 1);
+                          setTimeout(() => {
+                            if (listTopRef.current) {
+                              listTopRef.current.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }
+                          }, 100);
+                        }}
+                        className="flex items-center justify-center text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed p-3 rounded-lg transition-colors"
                       >
-                        Next →
+                        <RightArrowIcon className="w-4 h-4" />
                       </button>
                     </div>
                   )}
@@ -421,9 +444,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
                     </p>
                   </>
                 ) : (
-                  <>
-                    {/* Tampilan Alternatif untuk Tab Streak */}
-                  </>
+                  <>{/* Tampilan Alternatif untuk Tab Streak */}</>
                 )}
               </div>
             </div>
@@ -432,6 +453,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
       </div>
     </div>
   );
-};
+};;
 
 export default LeaderboardSection;
