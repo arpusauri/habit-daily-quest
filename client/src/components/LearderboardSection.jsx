@@ -82,12 +82,7 @@ const LeaderboardSection = ({ onViewPlayer }) => {
     }
   };
 
-  const getRankBadge = (index) => {
-    if (index === 0) return "🥇";
-    if (index === 1) return "🥈";
-    if (index === 2) return "🥉";
-    return `#${index + 1}`;
-  };
+  const getRankBadge = (index) => `#${index + 1}`;
 
   const formatLastSeen = (dateStr) => {
     if (!dateStr) return "—";
@@ -98,108 +93,154 @@ const LeaderboardSection = ({ onViewPlayer }) => {
   };
 
   return (
-    <div className="w-full">
-      {/* Section Header */}
-      <div className="text-left mt-8 mb-4 border-b border-gray-300 pb-2">
-        <h2 className="text-2xl font-black text-gray-900">🏆 Leaderboard</h2>
-      </div>
+    <div className="w-full flex flex-col">
+  
+      {/* Two-column full-bleed layout */}
+      <div className="flex flex-1 bg-white">
+        {/* ── SIDEBAR ── */}
+        <aside className="w-64 shrink-0 border-r border-gray-200 bg-gray-50 p-4 hidden sm:block">
+          {/* Search */}
+          <div className="relative mb-6">
+            <input
+              type="text"
+              placeholder="Cari username / UID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border-2 border-[#1e720f]/30 rounded-sm px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#053b05] focus:border-[#1e720f] transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700"
+              >
+                Clear
+              </button>
+            )}
+          </div>
 
-      {/* Background Container */}
-      <div className="bg-white border border-gray-200 p-6 shadow-sm">
-        {/* Tab & Search Control */}
-        <div className="space-y-3 mb-6">
-          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+          {/* Peringkat selector */}
+          <p className="text-xs font-black text-gray-500 uppercase tracking-wide mb-2">
+            Peringkat
+          </p>
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={() => setTab("level")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-bold transition-all border-l-4 ${
+                tab === "level"
+                  ? "bg-[#51b330]/10 text-[#1e720f] border-[#51b330]"
+                  : "text-gray-600 hover:bg-gray-100 border-transparent"
+              }`}
+            >
+              Top Level
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("streak")}
+              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-bold transition-all border-l-4 ${
+                tab === "streak"
+                  ? "bg-[#51b330]/10 text-[#1e720f] border-[#51b330]"
+                  : "text-gray-600 hover:bg-gray-100 border-transparent"
+              }`}
+            >
+              Top Streak
+            </button>
+          </div>
+        </aside>
+
+        {/* ── CONTENT ── */}
+        <div className="flex-1 min-w-0 p-6">
+          {/* Search + tab versi mobile (sidebar disembunyiin di layar kecil) */}
+          <div className="relative mb-4 sm:hidden">
+            <input
+              type="text"
+              placeholder="Cari username / UID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border-2 border-[#1e720f]/30 rounded-sm px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#053b05] focus:border-[#1e720f] transition-colors"
+            />
+          </div>
+          <div className="flex sm:hidden gap-2 mb-4">
             <button
               type="button"
               onClick={() => setTab("level")}
               className={`flex-1 py-2 text-xs font-black rounded-md transition-all ${
                 tab === "level"
-                  ? "bg-[#51b330] text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-[#51b330] text-white"
+                  : "bg-gray-100 text-gray-600"
               }`}
             >
-              ⭐ TOP LEVEL
+              Top Level
             </button>
             <button
               type="button"
               onClick={() => setTab("streak")}
               className={`flex-1 py-2 text-xs font-black rounded-md transition-all ${
                 tab === "streak"
-                  ? "bg-[#51b330] text-white shadow-sm"
-                  : "text-gray-500 hover:text-gray-900"
+                  ? "bg-[#51b330] text-white"
+                  : "bg-gray-100 text-gray-600"
               }`}
             >
-              🔥 TOP STREAK
+              Top Streak
             </button>
           </div>
 
-          {/* Search Input */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Cari username atau UID pemain..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border-2 border-[#1e720f]/30 rounded-sm px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#053b05] focus:border-[#1e720f] transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            )}
+          <div className="flex items-center gap-2 mb-5">
+            <h3 className="text-lg font-black text-gray-900">
+              {tab === "level" ? "Top Level" : "Top Streak"}
+            </h3>
+            <span className="text-xs font-bold text-gray-500 bg-gray-100 rounded-full px-2.5 py-0.5">
+              {leaderboard.length}
+            </span>
           </div>
-        </div>
 
-        {/* List Leaderboard */}
-        <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
           {loading ? (
-            <div className="py-12 text-center text-gray-400 text-sm animate-pulse">
+            <div className="py-16 text-center text-gray-400 text-sm animate-pulse">
               Memuat peringkat...
             </div>
           ) : leaderboard.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 text-sm">
+            <div className="py-16 text-center text-gray-400 text-sm">
               {searchQuery
                 ? `Tidak ada pemain "${searchQuery}"`
                 : "Belum ada data."}
             </div>
           ) : (
-            leaderboard.map((player, index) => (
-              <div
-                key={player.id || index}
-                onClick={() => onViewPlayer && onViewPlayer(player.id)}
-                className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-[#51b330] hover:bg-green-50/50 cursor-pointer transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-base font-bold w-6 text-center text-gray-700">
-                    {getRankBadge(index)}
-                  </span>
-                  <div>
-                    <p className="font-bold text-sm text-gray-900">
-                      {player.username}
-                    </p>
-                    <p className="text-[11px] text-gray-500">
-                      Lv. {player.level || 1} ·{" "}
-                      {formatLastSeen(player.last_login)}
-                    </p>
+            <div className="space-y-2 max-w-4xl">
+              {leaderboard.map((player, index) => (
+                <div
+                  key={player.id || index}
+                  onClick={() => onViewPlayer && onViewPlayer(player.id)}
+                  className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:border-[#51b330] hover:bg-green-50/50 cursor-pointer transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-base font-bold w-8 text-center text-gray-700">
+                      {getRankBadge(index)}
+                    </span>
+                    <div>
+                      <p className="font-bold text-sm text-gray-900">
+                        {player.username}
+                      </p>
+                      <p className="text-[11px] text-gray-500">
+                        Lv. {player.level || 1} ·{" "}
+                        {formatLastSeen(player.last_login)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {tab === "level" ? (
+                      <span className="text-xs font-black text-[#1e720f] bg-green-50 border border-green-200 px-2.5 py-1 rounded-md">
+                        {player.exp || 0} EXP
+                      </span>
+                    ) : (
+                      <span className="text-xs font-black text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-md">
+                        {player.max_streak || 0} Hari
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  {tab === "level" ? (
-                    <span className="text-xs font-black text-[#1e720f] bg-green-50 border border-green-200 px-2.5 py-1 rounded-md">
-                      {player.exp || 0} EXP
-                    </span>
-                  ) : (
-                    <span className="text-xs font-black text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-md">
-                      🔥 {player.max_streak || 0} Hari
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       </div>
