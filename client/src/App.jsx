@@ -159,6 +159,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [dataLoading, setDataLoading] = useState(true);
+  
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -781,7 +782,7 @@ function App() {
     <div className="w-full min-h-screen bg-white flex flex-col justify-between">
       {/* 🌌 AREA UTAMA: Warna Tema (appBackground) Full Lebar Kiri-Kanan */}
       <div
-        className={`w-full flex-1 ${appBackground} relative overflow-x-hidden`}
+        className={`w-full flex-1 flex flex-col ${appBackground} relative overflow-x-hidden`}
       >
         {/* 🌌 Aurora Glow Blobs */}
         {isAuroraMode && (
@@ -1011,70 +1012,74 @@ function App() {
           </div>
         </header>
 
-        <div className="w-full relative z-10">
-          <main className="w-full">
-              {activeTab === "quests" && (
-                <QuestSection
-                  habits={habits}
-                  newHabitName={newHabitName}
-                  setNewHabitName={setNewHabitName}
-                  addHabit={addHabit}
-                  completeHabit={completeHabit}
-                  deleteHabit={deleteHabit}
-                  isMatrixMode={isMatrixMode}
-                  isDarkMode={isDarkMode}
-                  isAuroraMode={isAuroraMode}
-                  isStarforgeMode={isStarforgeMode}
-                  isNotepadMode={isNotepadMode}
-                  onReorderHabits={handleReorderHabits}
-                />
-              )}
+        <div className="w-full relative z-10 flex-1 flex flex-col">
+          <main className="w-full flex-1 flex flex-col">
+            {activeTab === "quests" && (
+              <QuestSection
+                habits={habits}
+                newHabitName={newHabitName}
+                setNewHabitName={setNewHabitName}
+                addHabit={addHabit}
+                completeHabit={completeHabit}
+                deleteHabit={deleteHabit}
+                isMatrixMode={isMatrixMode}
+                isDarkMode={isDarkMode}
+                isAuroraMode={isAuroraMode}
+                isStarforgeMode={isStarforgeMode}
+                isNotepadMode={isNotepadMode}
+                onReorderHabits={handleReorderHabits}
+              />
+            )}
 
-              {activeTab === "heatmap" && (
-                <HabitHeatmap
-                  apiUrl={API_URL}
-                  equippedTheme={userData?.equipped_theme}
-                  refreshTrigger={activityTrigger}
-                  unlockedCosmeticsCount={userData?.inventory?.length || 0}
-                />
-              )}
+            {activeTab === "heatmap" && (
+              <HabitHeatmap
+                apiUrl={API_URL}
+                equippedTheme={userData?.equipped_theme}
+                refreshTrigger={activityTrigger}
+                unlockedCosmeticsCount={userData?.inventory?.length || 0}
+              />
+            )}
 
-              {activeTab === "inventory" && (
-                <Inventory
-                  userData={userData}
-                  selectedRarityFilter={selectedRarityFilter}
-                  setSelectedRarityFilter={setSelectedRarityFilter}
-                  equipItem={equipItem}
-                  unequipItem={unequipItem}
-                  setShowItemIndex={setShowItemIndex}
-                  isAuroraMode={isAuroraMode}
-                  isMatrixMode={isMatrixMode}
-                  isStarforgeMode={isStarforgeMode}
-                  isNotepadMode={isNotepadMode}
-                  isDarkMode={isDarkMode}
-                />
-              )}
+            {activeTab === "inventory" && (
+              <Inventory
+                userData={userData}
+                selectedRarityFilter={selectedRarityFilter}
+                setSelectedRarityFilter={setSelectedRarityFilter}
+                equipItem={equipItem}
+                unequipItem={unequipItem}
+                setShowItemIndex={setShowItemIndex}
+                isAuroraMode={isAuroraMode}
+                isMatrixMode={isMatrixMode}
+                isStarforgeMode={isStarforgeMode}
+                isNotepadMode={isNotepadMode}
+                isDarkMode={isDarkMode}
+              />
+            )}
 
-              {activeTab === "leaderboard" && (
-                <LeaderboardSection onViewPlayer={handleViewPlayer} />
-              )}
+            {activeTab === "leaderboard" && (
+              <LeaderboardSection
+                onViewPlayer={handleViewPlayer}
+                currentUser={userData}
+                currentUserId={userData.id}
+              />
+            )}
 
-              {activeTab === "shop" && (
-                <ShopSection
-                  apiUrl={API_URL}
-                  authFetch={authFetch}
-                  userData={userData}
-                  onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
-                  onBuyTicket={() => {
-                    rollGacha({
-                      endpoint: "/api/shop/buy-ticket",
-                      requireGems: false,
-                    });
-                  }}
-                />
-              )}
-            </main>
-          </div>
+            {activeTab === "shop" && (
+              <ShopSection
+                apiUrl={API_URL}
+                authFetch={authFetch}
+                userData={userData}
+                onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
+                onBuyTicket={() => {
+                  rollGacha({
+                    endpoint: "/api/shop/buy-ticket",
+                    requireGems: false,
+                  });
+                }}
+              />
+            )}
+          </main>
+        </div>
       </div>
 
       <Footer />
