@@ -7,7 +7,6 @@ import UserProfile from "./components/UserProfileSection";
 import QuestSection from "./components/QuestSection";
 import Inventory from "./components/InventorySection";
 import ItemIndex from "./components/ItemIndex";
-import Sidebar from "./components/Sidebar";
 import ShopSection from "./components/ShopSection";
 import BannerOverlay from "./components/BannerOverlay";
 import LeaderboardSection from "./components/LearderboardSection";
@@ -22,10 +21,12 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ShowcaseModal from "./components/ShowcaseModal";
 import NotificationOverlay from "./components/NotificationOverlay";
 import LoadingScreen from "./components/LoadingScreen"
+import Footer from "./components/FooterSection";
 
 import Dropdown from "./assets/icons/down.svg?react";
 import GachaIcon from "./assets/icons/stars.svg?react";
 import GemIcon from "./assets/icons/gem.svg?react";
+import ShardIcon from "./assets/icons/shard.svg?react";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -158,6 +159,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const [dataLoading, setDataLoading] = useState(true);
+  
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -780,7 +782,7 @@ function App() {
     <div className="w-full min-h-screen bg-white flex flex-col justify-between">
       {/* 🌌 AREA UTAMA: Warna Tema (appBackground) Full Lebar Kiri-Kanan */}
       <div
-        className={`w-full flex-1 ${appBackground} relative overflow-x-hidden`}
+        className={`w-full flex-1 flex flex-col ${appBackground} relative overflow-x-hidden`}
       >
         {/* 🌌 Aurora Glow Blobs */}
         {isAuroraMode && (
@@ -899,9 +901,16 @@ function App() {
 
             {/* SISI KANAN: Gems, Action Buttons, Menu, Profile */}
             <div className="flex items-center gap-6 shrink-0 py-3">
-              <div className="flex items-center gap-1.5 px-3 py-1.5">
+              <div className="flex items-center gap-1.5">
+                <ShardIcon className="w-5 h-5 text-yellow-400" />
+                <span className="text-md font-bold text-white">
+                  {userData?.shards || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-2 py-1.5">
                 <GemIcon className="w-5 h-5 text-yellow-400" />
-                <span className="text-md font-black text-white">
+                <span className="text-md font-bold text-white">
                   {userData?.gems || 0}
                 </span>
               </div>
@@ -1003,77 +1012,77 @@ function App() {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-10 sm:px-6 relative z-10 py-6">
-          <div className="rounded-lg p-4 sm:p-6 space-y-6 bg-white">
-            {/* 🖼️ KONTEN UTAMA */}
-            <main className="w-full space-y-6">
-              {activeTab === "quests" && (
-                <QuestSection
-                  habits={habits}
-                  newHabitName={newHabitName}
-                  setNewHabitName={setNewHabitName}
-                  addHabit={addHabit}
-                  completeHabit={completeHabit}
-                  deleteHabit={deleteHabit}
-                  isMatrixMode={isMatrixMode}
-                  isDarkMode={isDarkMode}
-                  isAuroraMode={isAuroraMode}
-                  isStarforgeMode={isStarforgeMode}
-                  isNotepadMode={isNotepadMode}
-                  onReorderHabits={handleReorderHabits}
-                />
-              )}
+        <div className="w-full relative z-10 flex-1 flex flex-col">
+          <main className="w-full flex-1 flex flex-col">
+            {activeTab === "quests" && (
+              <QuestSection
+                habits={habits}
+                newHabitName={newHabitName}
+                setNewHabitName={setNewHabitName}
+                addHabit={addHabit}
+                completeHabit={completeHabit}
+                deleteHabit={deleteHabit}
+                isMatrixMode={isMatrixMode}
+                isDarkMode={isDarkMode}
+                isAuroraMode={isAuroraMode}
+                isStarforgeMode={isStarforgeMode}
+                isNotepadMode={isNotepadMode}
+                onReorderHabits={handleReorderHabits}
+              />
+            )}
 
-              {activeTab === "heatmap" && (
-                <HabitHeatmap
-                  apiUrl={API_URL}
-                  equippedTheme={userData?.equipped_theme}
-                  refreshTrigger={activityTrigger}
-                  unlockedCosmeticsCount={userData?.inventory?.length || 0}
-                />
-              )}
+            {activeTab === "heatmap" && (
+              <HabitHeatmap
+                apiUrl={API_URL}
+                equippedTheme={userData?.equipped_theme}
+                refreshTrigger={activityTrigger}
+                unlockedCosmeticsCount={userData?.inventory?.length || 0}
+              />
+            )}
 
-              {activeTab === "inventory" && (
-                <Inventory
-                  userData={userData}
-                  selectedRarityFilter={selectedRarityFilter}
-                  setSelectedRarityFilter={setSelectedRarityFilter}
-                  equipItem={equipItem}
-                  unequipItem={unequipItem}
-                  setShowItemIndex={setShowItemIndex}
-                  isAuroraMode={isAuroraMode}
-                  isMatrixMode={isMatrixMode}
-                  isStarforgeMode={isStarforgeMode}
-                  isNotepadMode={isNotepadMode}
-                  isDarkMode={isDarkMode}
-                />
-              )}
+            {activeTab === "inventory" && (
+              <Inventory
+                userData={userData}
+                selectedRarityFilter={selectedRarityFilter}
+                setSelectedRarityFilter={setSelectedRarityFilter}
+                equipItem={equipItem}
+                unequipItem={unequipItem}
+                setShowItemIndex={setShowItemIndex}
+                isAuroraMode={isAuroraMode}
+                isMatrixMode={isMatrixMode}
+                isStarforgeMode={isStarforgeMode}
+                isNotepadMode={isNotepadMode}
+                isDarkMode={isDarkMode}
+              />
+            )}
 
-              {activeTab === "leaderboard" && (
-                <LeaderboardSection onViewPlayer={handleViewPlayer} />
-              )}
+            {activeTab === "leaderboard" && (
+              <LeaderboardSection
+                onViewPlayer={handleViewPlayer}
+                currentUser={userData}
+                currentUserId={userData.id}
+              />
+            )}
 
-              {activeTab === "shop" && (
-                <ShopSection
-                  apiUrl={API_URL}
-                  authFetch={authFetch}
-                  userData={userData}
-                  onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
-                  onBuyTicket={() => {
-                    rollGacha({
-                      endpoint: "/api/shop/buy-ticket",
-                      requireGems: false,
-                    });
-                  }}
-                />
-              )}
-            </main>
-          </div>
+            {activeTab === "shop" && (
+              <ShopSection
+                apiUrl={API_URL}
+                authFetch={authFetch}
+                userData={userData}
+                onRedeemSuccess={(updatedUser) => setUserData(updatedUser)}
+                onBuyTicket={() => {
+                  rollGacha({
+                    endpoint: "/api/shop/buy-ticket",
+                    requireGems: false,
+                  });
+                }}
+              />
+            )}
+          </main>
         </div>
       </div>
 
-      {/* ⚪ STRIP / FOOTER BAWAH (WARNA PUTIH) */}
-      <div className="w-full bg-white h-4 sm:h-6 shrink-0" />
+      <Footer />
 
       {/* MODALS & OVERLAYS */}
       <NotificationOverlay notifications={notifications} />

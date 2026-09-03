@@ -4,7 +4,7 @@ const UserProfile = ({
   userData,
   userCardBorder,
   nameTagStyle,
-  onOpenShowcase, // 🔥 Added prop for Showcase Modal
+  onOpenShowcase,
   onLogout,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
