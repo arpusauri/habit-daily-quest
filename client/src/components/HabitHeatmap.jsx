@@ -12,12 +12,12 @@ const formatDateKey = (date) => {
 
 const DAYS_HEADER = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
-const HabitHeatmap = ({ apiUrl = "", equippedTheme, refreshTrigger }) => {
+const HEATMAP_COLORS = ["#f0fdf4", "#bbf7d0", "#4ade80", "#22c55e", "#166534"];
+
+const HabitHeatmap = ({ apiUrl = "", refreshTrigger }) => {
   const [activeTab, setActiveTab] = useState("week"); // 'week' | 'month' | 'all'
   const [rawApiData, setRawApiData] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const isMatrixMode = equippedTheme === "ssr_matrix";
 
   // FETCH ACTIVITY DATA
   useEffect(() => {
@@ -51,131 +51,6 @@ const HabitHeatmap = ({ apiUrl = "", equippedTheme, refreshTrigger }) => {
 
     fetchActivity();
   }, [refreshTrigger, apiUrl]);
-
-  // COMPLETE THEME CONFIGURATION
-  const themeConfig = useMemo(() => {
-    switch (equippedTheme) {
-      case "ssr_matrix":
-        return {
-          colors: ["#0d1117", "#0e4429", "#006d32", "#26a641", "#39d353"],
-          activeBg: "bg-green-500",
-          activeText: "text-slate-950",
-          textAccent: "text-green-400",
-          borderGlow: "border-green-500/50 shadow-green-900/30",
-          badgeBg: "bg-green-500/20 text-green-300 border-green-500/30",
-          container: "bg-black border-green-600/40 font-mono text-white",
-          tabContainer: "bg-black border-green-600/30",
-          tabInactive: "text-green-600 hover:text-green-300",
-          cardBg: "bg-black border-green-800/30",
-          subText: "text-green-700",
-          mainText: "text-green-300",
-          todayRing: "ring-2 ring-green-400/80 bg-green-950/30",
-          emptyCell: "bg-green-950/50 text-green-700",
-          itemBaseBg: "bg-black",
-          itemInactiveBorder: "border-green-800/30 opacity-70",
-        };
-      case "ssr_notepad":
-        return {
-          colors: ["#fef3e2", "#fed7aa", "#fdba74", "#fb923c", "#ea580c"],
-          activeBg: "bg-orange-500",
-          activeText: "text-slate-950",
-          textAccent: "text-orange-600",
-          borderGlow: "border-orange-300 shadow-orange-200/40",
-          badgeBg: "bg-orange-100 text-orange-700 border-orange-300",
-          container: "bg-white border-stone-200 text-stone-800",
-          tabContainer: "bg-amber-50 border-stone-200",
-          tabInactive: "text-stone-400 hover:text-stone-700",
-          cardBg: "bg-amber-50 border-stone-200",
-          subText: "text-stone-400",
-          mainText: "text-stone-700",
-          todayRing: "ring-2 ring-orange-400/70 bg-orange-100/70",
-          emptyCell: "bg-stone-200 text-stone-500",
-          itemBaseBg: "bg-amber-50/60",
-          itemInactiveBorder: "border-stone-200 opacity-70",
-        };
-      case "shop_aurora":
-        return {
-          colors: ["#1e1b4b", "#a21caf", "#c026d3", "#e879f9", "#f0abfc"],
-          activeBg: "bg-fuchsia-500",
-          activeText: "text-slate-950",
-          textAccent: "text-fuchsia-300",
-          borderGlow: "border-fuchsia-500/50 shadow-fuchsia-900/30",
-          badgeBg: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30",
-          container: "bg-slate-900/90 border-slate-800 text-white",
-          tabContainer: "bg-slate-950/80 border-slate-800",
-          tabInactive: "text-slate-400 hover:text-slate-200",
-          cardBg: "bg-slate-950/70 border-slate-800/80",
-          subText: "text-slate-400",
-          mainText: "text-slate-200",
-          todayRing: "ring-2 ring-fuchsia-400/80 bg-slate-800/90",
-          emptyCell: "bg-slate-800/80 text-slate-600",
-          itemBaseBg: "bg-slate-950/50",
-          itemInactiveBorder: "border-slate-800/60 opacity-70",
-        };
-      case "ssr_starforge":
-        return {
-          colors: ["#1c1305", "#78350f", "#b45309", "#f59e0b", "#fde68a"],
-          activeBg: "bg-amber-500",
-          activeText: "text-slate-950",
-          textAccent: "text-amber-300",
-          borderGlow: "border-amber-500/50 shadow-amber-900/30",
-          badgeBg: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-          container: "bg-slate-900/90 border-slate-800 text-white",
-          tabContainer: "bg-slate-950/80 border-slate-800",
-          tabInactive: "text-slate-400 hover:text-slate-200",
-          cardBg: "bg-slate-950/70 border-slate-800/80",
-          subText: "text-slate-400",
-          mainText: "text-slate-200",
-          todayRing: "ring-2 ring-amber-400/80 bg-slate-800/90",
-          emptyCell: "bg-slate-800/80 text-slate-600",
-          itemBaseBg: "bg-slate-950/50",
-          itemInactiveBorder: "border-slate-800/60 opacity-70",
-        };
-      case "sr_dark":
-        return {
-          colors: ["#0f172a", "#312e81", "#4338ca", "#6366f1", "#a5b4fc"],
-          activeBg: "bg-indigo-500",
-          activeText: "text-slate-950",
-          textAccent: "text-indigo-400",
-          borderGlow: "border-indigo-500/50 shadow-indigo-900/30",
-          badgeBg: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
-          container: "bg-slate-900/90 border-slate-800 text-white",
-          tabContainer: "bg-slate-950/80 border-slate-800",
-          tabInactive: "text-slate-400 hover:text-slate-200",
-          cardBg: "bg-slate-950/70 border-slate-800/80",
-          subText: "text-slate-400",
-          mainText: "text-slate-200",
-          todayRing: "ring-2 ring-indigo-400/80 bg-slate-800/90",
-          emptyCell: "bg-slate-800/80 text-slate-600",
-          itemBaseBg: "bg-slate-950/50",
-          itemInactiveBorder: "border-slate-800/60 opacity-70",
-        };
-      // ─────────────────────────────────────────────────────
-      // DEFAULT - mengikuti visual LeaderboardSection (hijau)
-      // Tambahin case baru di sini (misal "wireframe") kalau
-      // mau bikin varian tema lain tanpa nyentuh JSX di bawah
-      // ─────────────────────────────────────────────────────
-      default:
-        return {
-          colors: ["#f0fdf4", "#bbf7d0", "#4ade80", "#22c55e", "#166534"],
-          activeBg: "bg-[#51b330]",
-          activeText: "text-white",
-          textAccent: "text-[#1e720f]",
-          borderGlow: "border-[#51b330]/50 shadow-green-200/40",
-          badgeBg: "bg-green-50 text-[#1e720f] border-green-200",
-          container: "bg-white border-gray-200 text-gray-900",
-          tabContainer: "bg-gray-100 border border-gray-200",
-          tabInactive: "text-gray-500 hover:text-gray-900",
-          cardBg: "bg-white border-gray-200 shadow-sm",
-          subText: "text-gray-500",
-          mainText: "text-gray-900",
-          todayRing: "ring-2 ring-[#51b330]/40 bg-green-50",
-          emptyCell: "bg-gray-100 text-gray-400",
-          itemBaseBg: "bg-white",
-          itemInactiveBorder: "border-gray-200 opacity-70",
-        };
-    }
-  }, [equippedTheme]);
 
   // MAP DATA FOR QUICK LOOKUP
   const dataMap = useMemo(() => {
@@ -317,50 +192,39 @@ const HabitHeatmap = ({ apiUrl = "", equippedTheme, refreshTrigger }) => {
     }
   }, [activeTab, weekData, monthCalendarData, yearData]);
 
+  const tabLabel = {
+    week: "minggu ini",
+    month: "bulan ini",
+    all: "total",
+  }[activeTab];
+
   return (
-    <div
-      className={`rounded-2xl p-4 shadow-xl my-4 border ${themeConfig.container}`}
-    >
-      {/* HEADER SECTION */}
-      <div className="flex flex-col gap-3 mb-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-lg">🔥</span>
-          <h3
-            className={`font-bold text-base whitespace-nowrap ${themeConfig.textAccent}`}
-          >
-            Quest Activity
-          </h3>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full border font-semibold ml-1 whitespace-nowrap ${themeConfig.badgeBg}`}
-          >
-            {activeTotalQuests}{" "}
-            {activeTab === "week"
-              ? "this week"
-              : activeTab === "month"
-                ? "this month"
-                : "total"}
+    <div className="w-full flex-1 flex flex-col">
+      {/* Top Bar: Title + Tabs */}
+      <div className="border-b border-gray-200 px-6 pt-4 bg-gray-50/50">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-xl font-black text-gray-900">Activity</h2>
+          <span className="text-xs font-bold text-[#1e720f] bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
+            {activeTotalQuests} {tabLabel}
           </span>
         </div>
 
-        {/* TAB SWITCHER */}
-        <div
-          className={`flex p-1 rounded-xl border text-xs font-medium shrink-0 self-start ${themeConfig.tabContainer}`}
-        >
+        <div className="flex overflow-x-auto gap-6 -mb-[1px]">
           {["week", "month", "all"].map((tabKey) => {
             const labels = {
               week: "This Week",
               month: "This Month",
               all: "Keseluruhan",
             };
-            const isActive = activeTab === tabKey;
             return (
               <button
                 key={tabKey}
+                type="button"
                 onClick={() => setActiveTab(tabKey)}
-                className={`px-3 py-1 rounded-lg transition-all whitespace-nowrap ${
-                  isActive
-                    ? `${themeConfig.activeBg} ${themeConfig.activeText} font-bold shadow-md`
-                    : themeConfig.tabInactive
+                className={`pb-3 text-sm font-bold whitespace-nowrap transition-all border-b-4 ${
+                  activeTab === tabKey
+                    ? "border-[#1e720f] text-[#1e720f]"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 {labels[tabKey]}
@@ -370,215 +234,172 @@ const HabitHeatmap = ({ apiUrl = "", equippedTheme, refreshTrigger }) => {
         </div>
       </div>
 
-      {/* BODY CONTENT */}
-      {loading ? (
-        <div
-          className={`h-28 flex items-center justify-center text-xs animate-pulse ${themeConfig.subText}`}
-        >
-          {isMatrixMode ? "> LOADING_CACHE..." : "Loading matrix data..."}
-        </div>
-      ) : (
-        <div>
-          {/* TAB 1: THIS WEEK */}
-          {activeTab === "week" && (
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-              {weekData.map((item, idx) => {
-                const hasQuest = item.count > 0;
-                return (
-                  <div
-                    key={idx}
-                    className={`relative flex flex-col items-center justify-between p-2 rounded-xl border transition-all ${
-                      item.isToday
-                        ? themeConfig.todayRing
-                        : themeConfig.itemBaseBg
-                    } ${
-                      hasQuest
-                        ? `${themeConfig.borderGlow} shadow-lg`
-                        : themeConfig.itemInactiveBorder
-                    }`}
-                  >
-                    <span
-                      className={`text-[10px] font-semibold uppercase ${themeConfig.subText}`}
-                    >
-                      {item.dayName}
-                    </span>
-                    <span
-                      className={`text-xs sm:text-sm font-bold my-1 ${themeConfig.mainText}`}
-                    >
-                      {item.dayNum}
-                    </span>
-                    <div
-                      className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-extrabold ${
-                        hasQuest
-                          ? `${themeConfig.activeBg} ${themeConfig.activeText} shadow-sm`
-                          : themeConfig.emptyCell
-                      }`}
-                    >
-                      {hasQuest ? `+${item.count}` : "•"}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* TAB 2: THIS MONTH */}
-          {activeTab === "month" && (
-            <div className="space-y-3">
-              <div
-                className={`text-xs font-semibold text-center uppercase tracking-wider ${themeConfig.subText}`}
-              >
-                {monthCalendarData.monthName}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {DAYS_HEADER.map((d, i) => (
-                  <div
-                    key={i}
-                    className={`text-[10px] font-bold uppercase ${themeConfig.subText}`}
-                  >
-                    {d}
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
-                {monthCalendarData.cells.map((cell) => {
-                  if (cell.isBlank) {
-                    return (
-                      <div
-                        key={cell.key}
-                        className="h-8 sm:h-9 rounded-lg border border-transparent bg-transparent"
-                      />
-                    );
-                  }
-
-                  const hasQuest = cell.count > 0;
+      {/* Content */}
+      <div className="p-6 flex-1">
+        {loading ? (
+          <div className="h-28 flex items-center justify-center text-xs text-gray-400 animate-pulse">
+            Memuat data aktivitas...
+          </div>
+        ) : (
+          <div className="w-full">
+            {/* TAB 1: THIS WEEK */}
+            {activeTab === "week" && (
+              <div className="grid grid-cols-7 gap-2 sm:gap-3 max-w-3xl">
+                {weekData.map((item, idx) => {
+                  const hasQuest = item.count > 0;
                   return (
                     <div
-                      key={cell.key}
-                      className={`h-8 sm:h-9 rounded-lg flex flex-col items-center justify-center relative border transition-all ${
-                        cell.isToday
-                          ? `${themeConfig.todayRing} font-extrabold`
-                          : themeConfig.itemBaseBg
+                      key={idx}
+                      className={`relative flex flex-col items-center justify-between p-3 rounded-lg border transition-all ${
+                        item.isToday
+                          ? "ring-2 ring-[#51b330]/40 bg-green-50"
+                          : "bg-white"
                       } ${
                         hasQuest
-                          ? `${themeConfig.borderGlow} ${themeConfig.cardBg} shadow-md`
-                          : themeConfig.itemInactiveBorder
+                          ? "border-[#51b330]/50 shadow-sm"
+                          : "border-gray-200 opacity-70"
                       }`}
                     >
-                      <span
-                        className={`text-[11px] font-semibold ${themeConfig.mainText}`}
-                      >
-                        {cell.dayNum}
+                      <span className="text-[10px] font-semibold uppercase text-gray-500">
+                        {item.dayName}
                       </span>
-                      {hasQuest && (
-                        <span
-                          className={`absolute -top-1 -right-1 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ${themeConfig.activeBg} ${themeConfig.activeText} shadow-sm`}
-                        >
-                          {cell.count}
-                        </span>
-                      )}
+                      <span className="text-sm font-bold my-1 text-gray-900">
+                        {item.dayNum}
+                      </span>
+                      <div
+                        className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-extrabold ${
+                          hasQuest
+                            ? "bg-[#51b330] text-white shadow-sm"
+                            : "bg-gray-100 text-gray-400"
+                        }`}
+                      >
+                        {hasQuest ? `+${item.count}` : "—"}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* TAB 3: KESELURUHAN */}
-          {activeTab === "all" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
-                {/* 1. Hari Aktif */}
-                <div
-                  className={`rounded-xl p-2 text-center border ${themeConfig.cardBg}`}
-                >
-                  <div
-                    className={`text-[10px] font-medium ${themeConfig.subText}`}
-                  >
-                    Hari Aktif
-                  </div>
-                  <div
-                    className={`text-sm sm:text-base font-black ${themeConfig.textAccent}`}
-                  >
-                    {overallStats.activeDays}{" "}
-                    <span
-                      className={`text-[10px] font-normal ${themeConfig.subText}`}
-                    >
-                      Hari
-                    </span>
-                  </div>
+            {/* TAB 2: THIS MONTH */}
+            {activeTab === "month" && (
+              <div className="space-y-3 max-w-2xl">
+                <div className="text-xs font-semibold text-center uppercase tracking-wider text-gray-500">
+                  {monthCalendarData.monthName}
                 </div>
 
-                {/* 2. Rekor Sehari */}
-                <div
-                  className={`rounded-xl p-2 text-center border ${themeConfig.cardBg}`}
-                >
-                  <div
-                    className={`text-[10px] font-medium ${themeConfig.subText}`}
-                  >
-                    Rekor Sehari
-                  </div>
-                  <div
-                    className={`text-sm sm:text-base font-black ${themeConfig.textAccent}`}
-                  >
-                    {overallStats.maxSingleDay}{" "}
-                    <span
-                      className={`text-[10px] font-normal ${themeConfig.subText}`}
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {DAYS_HEADER.map((d, i) => (
+                    <div
+                      key={i}
+                      className="text-[10px] font-bold uppercase text-gray-500"
                     >
-                      Quests
-                    </span>
-                  </div>
+                      {d}
+                    </div>
+                  ))}
                 </div>
 
-                {/* 3. Streak Terpanjang */}
-                <div
-                  className={`rounded-xl p-2 text-center border ${themeConfig.cardBg}`}
-                >
-                  <div
-                    className={`text-[10px] font-medium ${themeConfig.subText}`}
-                  >
-                    Streak Terpanjang
-                  </div>
-                  <div
-                    className={`text-sm sm:text-base font-black ${themeConfig.textAccent}`}
-                  >
-                    {overallStats.longestStreak}{" "}
-                    <span
-                      className={`text-[10px] font-normal ${themeConfig.subText}`}
-                    >
-                      Hari
-                    </span>
-                  </div>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {monthCalendarData.cells.map((cell) => {
+                    if (cell.isBlank) {
+                      return (
+                        <div
+                          key={cell.key}
+                          className="h-10 rounded-lg border border-transparent bg-transparent"
+                        />
+                      );
+                    }
+
+                    const hasQuest = cell.count > 0;
+                    return (
+                      <div
+                        key={cell.key}
+                        className={`h-10 rounded-lg flex flex-col items-center justify-center relative border transition-all ${
+                          cell.isToday
+                            ? "ring-2 ring-[#51b330]/40 bg-green-50"
+                            : "bg-white"
+                        } ${
+                          hasQuest
+                            ? "border-[#51b330]/50 shadow-sm"
+                            : "border-gray-200 opacity-70"
+                        }`}
+                      >
+                        <span className="text-xs font-semibold text-gray-900">
+                          {cell.dayNum}
+                        </span>
+                        {hasQuest && (
+                          <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center bg-[#51b330] text-white shadow-sm">
+                            {cell.count}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            )}
 
-              {/* Heatmap Full Year */}
-              <div
-                className={`w-full overflow-x-auto flex justify-center py-2 rounded-xl scrollbar-thin border ${themeConfig.cardBg}`}
-              >
-                <ActivityCalendar
-                  data={yearData}
-                  theme={{
-                    dark: themeConfig.colors,
-                    light: themeConfig.colors,
-                  }}
-                  blockSize={10}
-                  blockMargin={2.5}
-                  blockRadius={2}
-                  fontSize={10}
-                  showWeekdayLabels={true}
-                  labels={{
-                    legend: { less: "Relax", more: "Grind" },
-                    totalCount: "{{count}} Quests logged in 365 days",
-                  }}
-                />
+            {/* TAB 3: KESELURUHAN */}
+            {activeTab === "all" && (
+              <div className="space-y-4 max-w-4xl">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg p-3 text-center border border-gray-200 bg-white shadow-sm">
+                    <div className="text-xs font-medium text-gray-500">
+                      Hari Aktif
+                    </div>
+                    <div className="text-lg font-black text-[#1e720f]">
+                      {overallStats.activeDays}{" "}
+                      <span className="text-xs font-normal text-gray-500">
+                        Hari
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg p-3 text-center border border-gray-200 bg-white shadow-sm">
+                    <div className="text-xs font-medium text-gray-500">
+                      Rekor Sehari
+                    </div>
+                    <div className="text-lg font-black text-[#1e720f]">
+                      {overallStats.maxSingleDay}{" "}
+                      <span className="text-xs font-normal text-gray-500">
+                        Quests
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg p-3 text-center border border-gray-200 bg-white shadow-sm">
+                    <div className="text-xs font-medium text-gray-500">
+                      Streak Terpanjang
+                    </div>
+                    <div className="text-lg font-black text-[#1e720f]">
+                      {overallStats.longestStreak}{" "}
+                      <span className="text-xs font-normal text-gray-500">
+                        Hari
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full overflow-x-auto flex justify-center py-3 rounded-lg border border-gray-200 bg-white shadow-sm">
+                  <ActivityCalendar
+                    data={yearData}
+                    theme={{ dark: HEATMAP_COLORS, light: HEATMAP_COLORS }}
+                    blockSize={10}
+                    blockMargin={2.5}
+                    blockRadius={2}
+                    fontSize={10}
+                    showWeekdayLabels={true}
+                    labels={{
+                      legend: { less: "Relax", more: "Grind" },
+                      totalCount: "{{count}} Quests logged in 365 days",
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
