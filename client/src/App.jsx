@@ -840,7 +840,7 @@ function App() {
                 >
                   Activity
                   <span
-                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
                       activeTab === "heatmap"
                         ? "bg-[#7ad950]"
                         : "bg-transparent"
@@ -857,7 +857,7 @@ function App() {
                 >
                   Inventory
                   <span
-                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
                       activeTab === "inventory"
                         ? "bg-[#7ad950]"
                         : "bg-transparent"
@@ -874,7 +874,7 @@ function App() {
                 >
                   Leaderboard
                   <span
-                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
                       activeTab === "leaderboard"
                         ? "bg-[#7ad950]"
                         : "bg-transparent"
@@ -889,9 +889,9 @@ function App() {
                     activeTab === "shop" ? "" : "hover:bg-[#51b330]"
                   }`}
                 >
-                  Shop
+                  Shops
                   <span
-                    className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
                       activeTab === "shop" ? "bg-[#7ad950]" : "bg-transparent"
                     }`}
                   />

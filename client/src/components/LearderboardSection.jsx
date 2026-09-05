@@ -15,15 +15,15 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
   const ITEMS_PER_PAGE = 10;
   const [hasNextPage, setHasNextPage] = useState(true);
 
-  // 1. Buat referensi untuk bagian atas list
+  // Referensi bagian atas list
   const listTopRef = useRef(null);
 
-  // State untuk Peringkat Asli
+  // State Peringkat
   const [myRank, setMyRank] = useState("...");
   const [myStreakRank, setMyStreakRank] = useState("...");
   const [myMaxStreak, setMyMaxStreak] = useState(0);
 
-  // Reset page ke 1 kalau ganti tab atau ngetik search
+  // Reset page ke 1 kalau ganti tab atau ketik search
   useEffect(() => {
     setPage(1);
   }, [tab, searchQuery]);
@@ -47,7 +47,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
       const userLevel = currentUser.level || 1;
       const userExp = currentUser.exp || 0;
 
-      // Hitung jumlah pemain yang punya level lebih tinggi ATAU (level sama tapi exp lebih tinggi)
       const { count, error } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true })
@@ -82,7 +81,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
 
       if (error) throw error;
       setLeaderboard(data || []);
-      setHasNextPage(false); // Disable next page saat searching
+      setHasNextPage(false);
     } catch (err) {
       console.error("Error searching players:", err.message);
     } finally {
@@ -102,7 +101,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
           .select("id, username, level, exp, last_login")
           .order("level", { ascending: false })
           .order("exp", { ascending: false })
-          .range(from, to + 1); // Ambil +1 untuk cek apa ada halaman selanjutnya
+          .range(from, to + 1);
 
         if (error) throw error;
 
@@ -110,7 +109,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
         setLeaderboard(hasMore ? data.slice(0, ITEMS_PER_PAGE) : data);
         setHasNextPage(hasMore);
       } else {
-        // Logika streak diproses di frontend karena butuh join table habits
         const { data, error } = await supabase
           .from("users")
           .select("id, username, level, last_login, habits(streak)");
@@ -125,12 +123,10 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
           return { ...user, max_streak: maxStreak };
         });
 
-        // Urutkan dari streak tertinggi
         processed.sort(
           (a, b) => b.max_streak - a.max_streak || b.level - a.level,
         );
 
-        // --- TAMBAHAN BARU: Cari peringkat dan streak mu sendiri ---
         const myIndex = processed.findIndex((p) => p.id === currentUserId);
         if (myIndex !== -1) {
           setMyStreakRank(`#${myIndex + 1}`);
@@ -139,7 +135,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
           setMyStreakRank("N/A");
           setMyMaxStreak(0);
         }
-        // ---------------------------------------------------------
 
         const hasMore = processed.length > to + 1;
         setLeaderboard(processed.slice(from, to + 1));
@@ -165,7 +160,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
     return `${days} hari lalu`;
   };
 
-  // Kalkulasi stat user saat ini
   const currentExp = currentUser?.exp || 0;
   const expNeeded = 100 - currentExp;
   const progressPercent = Math.min(100, Math.max(0, currentExp));
@@ -173,9 +167,8 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
   return (
     <div className="w-full flex-1 flex flex-col">
       <div className="flex flex-1 bg-white">
-        {/* ── SIDEBAR ── */}
+        {/* ── SIDEBAR (DESKTOP) ── */}
         <aside className="w-64 shrink-0 border-r border-gray-200 bg-gray-50 p-4 hidden sm:block">
-          {/* (Sidebar utuh, tidak ada yg diubah dari kodemu) */}
           <div className="relative mb-6">
             <input
               type="text"
@@ -188,7 +181,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700 cursor-pointer"
               >
                 Clear
               </button>
@@ -198,10 +191,11 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
             Leaderboard Type
           </p>
           <div className="space-y-1">
+            {/* Ditambahkan cursor-pointer pada tombol sidebar */}
             <button
               type="button"
               onClick={() => setTab("level")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-bold transition-all ${
+              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-bold cursor-pointer transition-all ${
                 tab === "level"
                   ? "bg-[#51b330]/10 text-[#1e720f] border-[#51b330]"
                   : "text-gray-600 hover:bg-gray-100 border-transparent"
@@ -212,7 +206,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
             <button
               type="button"
               onClick={() => setTab("streak")}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-bold transition-all ${
+              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-bold cursor-pointer transition-all ${
                 tab === "streak"
                   ? "bg-[#51b330]/10 text-[#1e720f] border-[#51b330]"
                   : "text-gray-600 hover:bg-gray-100 border-transparent"
@@ -234,11 +228,13 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
               className="w-full bg-white border-2 border-[#1e720f]/30 rounded-sm px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#053b05] focus:border-[#1e720f] transition-colors"
             />
           </div>
+
+          {/* TAB BONGKAR-PASANG MOBILE */}
           <div className="flex sm:hidden gap-2 mb-4">
             <button
               type="button"
               onClick={() => setTab("level")}
-              className={`flex-1 py-2 text-xs font-black rounded-md transition-all ${
+              className={`flex-1 py-2 text-xs font-black rounded-md cursor-pointer transition-all ${
                 tab === "level"
                   ? "bg-[#51b330] text-white"
                   : "bg-gray-100 text-gray-600"
@@ -249,7 +245,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
             <button
               type="button"
               onClick={() => setTab("streak")}
-              className={`flex-1 py-2 text-xs font-black rounded-md transition-all ${
+              className={`flex-1 py-2 text-xs font-black rounded-md cursor-pointer transition-all ${
                 tab === "streak"
                   ? "bg-[#51b330] text-white rounded-l-none border-l-0"
                   : "bg-gray-100 text-gray-600"
@@ -262,7 +258,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
           <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
             {/* KOLOM KIRI: Daftar Peringkat */}
             <div className="flex-1 w-full min-w-0">
-              {/* Tambahkan ref di sini agar scroll otomatis ke elemen ini */}
               <div
                 ref={listTopRef}
                 className="flex items-center gap-2 mb-5 pt-2"
@@ -279,8 +274,8 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
               ) : leaderboard.length === 0 ? (
                 <div className="py-16 text-center text-gray-400 text-sm">
                   {searchQuery
-                    ? `Tidak ada pemain "${searchQuery}"`
-                    : "Belum ada data."}
+                    ? `Player "${searchQuery}" not found.`
+                    : "No players found."}
                 </div>
               ) : (
                 <div className="space-y-2 w-full">
@@ -345,13 +340,11 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
                             }
                           }, 100);
                         }}
-                        // p-3 membuat tombol lebih kotak dan area klik membesar (~44px)
-                        className="flex items-center justify-center text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed p-3 rounded-lg transition-colors"
+                        className="flex items-center justify-center text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed p-3 rounded-lg transition-colors cursor-pointer"
                       >
                         <LeftArrowIcon className="w-4 h-4" />
                       </button>
 
-                      {/* Indikator Halaman (Memberi feedback visual ke user) */}
                       <span className="text-sm font-bold text-gray-400 min-w-[3rem] text-center">
                         {page}
                       </span>
@@ -370,7 +363,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
                             }
                           }, 100);
                         }}
-                        className="flex items-center justify-center text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed p-3 rounded-lg transition-colors"
+                        className="flex items-center justify-center text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed p-3 rounded-lg transition-colors cursor-pointer"
                       >
                         <RightArrowIcon className="w-4 h-4" />
                       </button>
@@ -381,7 +374,7 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
             </div>
 
             {/* KOLOM KANAN: Kartu Statistik Pribadi */}
-            <div className="w-full lg:w-[350px] shrink-0 bg-white border border-gray-200 rounded-xl p-6 shadow-sm mt-[50px] lg:mt-[44px]">
+            <div className="w-full lg:w-[350px] shrink-0 bg-white border border-gray-200 rounded-xl p-6 shadow-sm mt-[50px] lg:mt-[56px]">
               <h3 className="text-sm font-black text-gray-800 mb-5 uppercase tracking-wider">
                 Your Standings
               </h3>
@@ -427,9 +420,8 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
                   )}
                 </div>
 
-                {tab === "level" ? (
+                {tab === "level" && (
                   <>
-                    {/* Progress Bar Dinamis untuk Level */}
                     <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden mb-3">
                       <div
                         className="bg-[#51b330] h-full rounded-full transition-all duration-1000 ease-out"
@@ -443,8 +435,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
                       needed to Level Up!
                     </p>
                   </>
-                ) : (
-                  <>{/* Tampilan Alternatif untuk Tab Streak */}</>
                 )}
               </div>
             </div>
@@ -453,6 +443,6 @@ const LeaderboardSection = ({ onViewPlayer, currentUser, currentUserId }) => {
       </div>
     </div>
   );
-};;
+};
 
 export default LeaderboardSection;
