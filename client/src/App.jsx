@@ -850,23 +850,6 @@ function App() {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab("inventory")}
-                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
-                    activeTab === "inventory" ? "" : "hover:bg-[#51b330]"
-                  }`}
-                >
-                  Inventory
-                  <span
-                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
-                      activeTab === "inventory"
-                        ? "bg-[#7ad950]"
-                        : "bg-transparent"
-                    }`}
-                  />
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => setActiveTab("leaderboard")}
                   className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
                     activeTab === "leaderboard" ? "" : "hover:bg-[#51b330]"
@@ -876,6 +859,23 @@ function App() {
                   <span
                     className={`absolute left-0 right-0 bottom-0 h-[4px] ${
                       activeTab === "leaderboard"
+                        ? "bg-[#7ad950]"
+                        : "bg-transparent"
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("inventory")}
+                  className={`relative flex items-center px-3 text-sm text-white font-bold transition-colors cursor-pointer ${
+                    activeTab === "inventory" ? "" : "hover:bg-[#51b330]"
+                  }`}
+                >
+                  Inventory
+                  <span
+                    className={`absolute left-0 right-0 bottom-0 h-[4px] ${
+                      activeTab === "inventory"
                         ? "bg-[#7ad950]"
                         : "bg-transparent"
                     }`}

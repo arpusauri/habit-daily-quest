@@ -106,7 +106,7 @@ const QuestSection = ({
               key={f}
               type="button"
               onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-sm capitalize transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-sm capitalize transition-all cursor-pointer ${
                 statusFilter === f
                   ? "bg-[#51b330] text-white"
                   : "text-gray-500 hover:text-gray-900"
@@ -144,7 +144,7 @@ const QuestSection = ({
           />
           <button
             type="submit"
-            className="px-4 py-2 text-sm font-black text-white bg-[#51b330] hover:bg-[#409228] active:scale-95 transition-all rounded-sm shrink-0"
+            className="px-4 py-2 text-sm font-black text-white bg-[#51b330] hover:bg-[#409228] active:scale-95 transition-all rounded-sm shrink-0 cursor-pointer"
           >
             Add Quest
           </button>
@@ -204,7 +204,7 @@ const QuestSection = ({
                     <button
                       type="button"
                       onClick={() => completeHabit(habit.id)}
-                      className="px-4 py-2 text-xs font-black text-white bg-[#51b330] hover:bg-[#409228] active:scale-95 transition-all rounded-sm"
+                      className="px-4 py-2 text-xs font-black text-white bg-[#51b330] hover:bg-[#409228] active:scale-95 transition-all rounded-sm cursor-pointer"
                     >
                       Complete
                     </button>
@@ -217,7 +217,7 @@ const QuestSection = ({
                   <button
                     type="button"
                     onClick={() => deleteHabit(habit.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors rounded-sm"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors rounded-sm cursor-pointer"
                     title="Delete Quest"
                   >
                     ✕
