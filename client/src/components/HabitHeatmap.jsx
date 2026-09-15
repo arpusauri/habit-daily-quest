@@ -214,7 +214,7 @@ const HabitHeatmap = ({ apiUrl = "", refreshTrigger }) => {
             {[
               { id: "week", label: "This Week" },
               { id: "month", label: "This Month" },
-              { id: "all", label: "All Time" },
+              { id: "all", label: "This Year" },
             ].map((tab) => (
               <button
                 key={tab.id}

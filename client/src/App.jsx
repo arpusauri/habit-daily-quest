@@ -1028,6 +1028,11 @@ function App() {
                 isStarforgeMode={isStarforgeMode}
                 isNotepadMode={isNotepadMode}
                 onReorderHabits={handleReorderHabits}
+                theme={isDarkMode ? "obsidian" : "default"}
+
+                // ATAU jika value dari userData.equipped_theme sudah persis sama
+                // dengan key di THEMES (misal: "default", "obsidian"), gunakan ini:
+                // theme={userData?.equipped_theme || "default"}
               />
             )}
 
