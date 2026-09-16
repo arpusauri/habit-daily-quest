@@ -27,6 +27,25 @@ import Dropdown from "./assets/icons/down.svg?react";
 import GachaIcon from "./assets/icons/stars.svg?react";
 import GemIcon from "./assets/icons/gem.svg?react";
 import ShardIcon from "./assets/icons/shard.svg?react";
+{
+  /* Ikon hamburger sederhana — taruh di dekat komponen ikon lain */
+}
+const HamburgerIcon = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <line x1="4" y1="6" x2="20" y2="6" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <line x1="4" y1="18" x2="20" y2="18" />
+  </svg>
+);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -155,8 +174,11 @@ function App() {
   const [viewingPlayer, setViewingPlayer] = useState(null);
   const [activeTab, setActiveTab] = useState("quests");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef(null);
   const [dataLoading, setDataLoading] = useState(true);
+
+  
   
 
   useEffect(() => {
@@ -801,18 +823,29 @@ function App() {
         )}
 
         {/*  TOP NAVIGATION HEADER - FULL WIDTH */}
+        {/*  TOP NAVIGATION HEADER - FULL WIDTH */}
         <header className="w-full bg-[#1e720f]/80 shadow-xl relative z-30">
           <div className="max-w-8xl mx-auto px-4 sm:px-6 flex items-stretch justify-between gap-4 flex-wrap sm:flex-nowrap">
-            {/* SISI KIRI: Title + Tabs */}
+            {/* SISI KIRI: Hamburger (mobile) + Title + Tabs (desktop) */}
             <div className="flex items-stretch gap-4 min-w-0">
-              {/* Title */}
-              <div className="flex items-center py-3 shrink-0">
+              {/* Hamburger — hanya muncul di mobile */}
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen((prev) => !prev)}
+                className="flex md:hidden items-center justify-center shrink-0 text-white hover:text-gray-300 transition-colors cursor-pointer px-1"
+                aria-label="Toggle menu"
+              >
+                <HamburgerIcon className="w-6 h-6" />
+              </button>
+
+              {/* Title — disembunyikan di mobile */}
+              <div className="hidden md:flex items-center py-3 shrink-0">
                 <h1 className="text-lg font-black text-white tracking-wider cursor-pointer select-none">
                   Gambit
                 </h1>
               </div>
 
-              {/* Tabs Placeholder - edit sesuai kebutuhan */}
+              {/* Tabs — hanya muncul di desktop */}
               <nav className="hidden md:flex items-stretch gap-1 shrink-0">
                 <button
                   type="button"
@@ -897,35 +930,36 @@ function App() {
               </nav>
             </div>
 
-            {/* SISI KANAN: Gems, Action Buttons, Menu, Profile */}
-            <div className="flex items-center gap-6 shrink-0 py-3">
-              <div className="flex items-center gap-1.5">
+            {/* SISI KANAN: Gems/Shards (desktop only), Gacha, Menu, Profile */}
+            <div className="flex items-center gap-3 sm:gap-6 shrink-0 py-3">
+              {/* Currency — disembunyikan di mobile, dipindah ke panel */}
+              <div className="hidden md:flex items-center gap-1.5">
                 <ShardIcon className="w-5 h-5 text-yellow-400" />
                 <span className="text-md font-bold text-white">
                   {userData?.shards || 0}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 px-2 py-1.5">
+              <div className="hidden md:flex items-center gap-1.5 px-2 py-1.5">
                 <GemIcon className="w-5 h-5 text-yellow-400" />
                 <span className="text-md font-bold text-white">
                   {userData?.gems || 0}
                 </span>
               </div>
 
-              {/* Gacha Icon - berdiri sendiri, ada jarak lega dari grup dropdown+profile */}
+              {/* Gacha Icon — tetap tampil di semua ukuran layar */}
               <button
                 type="button"
                 onClick={() => setShowBanner(true)}
                 className="flex items-center justify-center transition-all active:scale-95 cursor-pointer text-sm"
                 title="Gacha Banner"
               >
-                <GachaIcon className="w-7 h-7 text-white hover:text-gray-300 transition-colors" />
+                <GachaIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white hover:text-gray-300 transition-colors" />
               </button>
 
-              {/* Grup Dropdown Menu + Profile - dirapatkan karena saling terkait */}
+              {/* Grup Dropdown Menu + Profile */}
               <div className="flex items-center gap-2">
-                {/* DROPDOWN MENU (titik tiga) */}
+                {/* DROPDOWN MENU (titik tiga) — tetap tampil di semua ukuran */}
                 <div className="relative" ref={menuRef}>
                   <button
                     type="button"
@@ -938,12 +972,10 @@ function App() {
 
                   {menuOpen && (
                     <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-gray-200 shadow-xl overflow-hidden z-10 animate-fade-in">
-                      {/* Item biasa — copy-paste blok ini buat nambah menu lain */}
                       <button
                         type="button"
                         onClick={() => {
                           setMenuOpen(false);
-                          // aksi kamu di sini
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-[#7ad950]/20 transition-colors flex items-center gap-2 cursor-pointer"
                       >
@@ -954,17 +986,14 @@ function App() {
                         type="button"
                         onClick={() => {
                           setMenuOpen(false);
-                          // aksi kamu di sini
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-[#7ad950]/20 transition-colors flex items-center gap-2 cursor-pointer"
                       >
                         Help
                       </button>
 
-                      {/* Divider — opsional, buat misahin aksi destruktif */}
                       <div className="border-t border-gray-200" />
 
-                      {/* Logout */}
                       <button
                         type="button"
                         onClick={() => {
@@ -979,7 +1008,7 @@ function App() {
                   )}
                 </div>
 
-                {/* Profile - dekat dengan dropdown */}
+                {/* Profile — tetap tampil di semua ukuran */}
                 <button
                   type="button"
                   onClick={() => setShowShowcase(true)}
@@ -1008,6 +1037,52 @@ function App() {
               </div>
             </div>
           </div>
+
+          {/* MOBILE NAV PANEL — fade-in ke bawah, isi tabs + currency */}
+          {mobileNavOpen && (
+            <div className="md:hidden bg-[#1e720f] border-t border-white/10 animate-fade-in">
+              <div className="px-4 py-3 flex items-center gap-4 border-b border-white/10">
+                <div className="flex items-center gap-1.5">
+                  <ShardIcon className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm font-bold text-white">
+                    {userData?.shards || 0}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <GemIcon className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm font-bold text-white">
+                    {userData?.gems || 0}
+                  </span>
+                </div>
+              </div>
+
+              <nav className="flex flex-col">
+                {[
+                  { key: "quests", label: "Quests" },
+                  { key: "heatmap", label: "Activity" },
+                  { key: "leaderboard", label: "Leaderboard" },
+                  { key: "inventory", label: "Inventory" },
+                  { key: "shop", label: "Shops" },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.key);
+                      setMobileNavOpen(false);
+                    }}
+                    className={`text-left px-4 py-3 text-sm font-bold transition-colors cursor-pointer border-l-4 ${
+                      activeTab === tab.key
+                        ? "border-[#7ad950] bg-[#51b330]/40 text-white"
+                        : "border-transparent text-white/80 hover:bg-[#51b330]/30"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )}
         </header>
 
         <div className="w-full relative z-10 flex-1 flex flex-col">
