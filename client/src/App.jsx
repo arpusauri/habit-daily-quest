@@ -32,9 +32,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  (window.location.hostname === "localhost"
-    ? "http://localhost:5000"
-    : "https://habit-daily-quest-server.vercel.app");
+  (window.location.hostname === "localhost" ? "http://localhost:5000" : ""); 
 
 const ITEM_NAME_MAP = {
   r_blue: "Cyan Border",
