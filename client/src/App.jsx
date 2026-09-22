@@ -1015,7 +1015,7 @@ function App() {
                   title="Lihat Player Card"
                   className="flex items-center gap-2 shrink-0 cursor-pointer"
                 >
-                  <div className="min-w-0 hidden sm:block text-left">
+                  <div className="min-w-0 sm:block text-left">
                     <h2
                       className={`font-black text-md truncate leading-tight ${nameTagStyle}`}
                     >
@@ -1041,7 +1041,7 @@ function App() {
           {/* MOBILE NAV PANEL — fade-in ke bawah, isi tabs + currency */}
           {mobileNavOpen && (
             <div className="md:hidden bg-[#1e720f] border-t border-white/10 animate-fade-in">
-              <div className="px-4 py-3 flex items-center gap-4 border-b border-white/10">
+              <div className="px-4 py-3 flex items-center justify-center gap-6 border-b border-white/10">
                 <div className="flex items-center gap-1.5">
                   <ShardIcon className="w-5 h-5 text-yellow-400" />
                   <span className="text-sm font-bold text-white">
