@@ -88,8 +88,14 @@ function BannerOverlay({
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white border border-gray-200 w-full max-w-2xl rounded-lg text-gray-900 shadow-2xl relative flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white border border-gray-200 w-full max-w-2xl rounded-lg text-gray-900 shadow-2xl relative flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0">

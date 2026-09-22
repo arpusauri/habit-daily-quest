@@ -71,8 +71,14 @@ const ShowcaseModal = ({ isOpen, onClose, userData, equippedCosmetics }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="flex flex-col items-center max-w-md w-full">
+    <div
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="flex flex-col items-center max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ================= AREA KARTU ================= */}
         <div className="relative w-full">
           {/* Tombol Close — pojok kanan atas, di luar area export PNG */}
