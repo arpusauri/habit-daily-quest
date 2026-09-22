@@ -823,7 +823,6 @@ function App() {
         )}
 
         {/*  TOP NAVIGATION HEADER - FULL WIDTH */}
-        {/*  TOP NAVIGATION HEADER - FULL WIDTH */}
         <header className="w-full bg-[#1e720f]/80 shadow-xl relative z-30">
           <div className="max-w-8xl mx-auto px-4 sm:px-6 flex items-stretch justify-between gap-4 flex-wrap sm:flex-nowrap">
             {/* SISI KIRI: Hamburger (mobile) + Title + Tabs (desktop) */}
@@ -959,15 +958,31 @@ function App() {
 
               {/* Grup Dropdown Menu + Profile */}
               <div className="flex items-center gap-2">
-                {/* DROPDOWN MENU (titik tiga) — tetap tampil di semua ukuran */}
+                {/* Nama + Arrow — buka Dropdown Menu */}
                 <div className="relative" ref={menuRef}>
                   <button
                     type="button"
                     onClick={() => setMenuOpen((prev) => !prev)}
-                    className="flex items-center justify-center transition-all active:scale-95 cursor-pointer text-sm"
+                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+                      menuOpen ? "bg-white/15" : "hover:bg-white/10"
+                    }`}
                     aria-label="Menu"
                   >
-                    <Dropdown className="w-6 h-5 text-white hover:text-gray-300 transition-colors" />
+                    <Dropdown
+                      className={`w-6 h-5 text-white hover:text-gray-300 transition-transform ${
+                        menuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                    <div className="min-w-0 hidden sm:block text-left">
+                      <h2
+                        className={`font-black text-md truncate leading-tight ${nameTagStyle}`}
+                      >
+                        {userData?.username || "Player"}
+                      </h2>
+                      <p className="text-[9px] text-gray-400 font-semibold truncate leading-tight">
+                        {userData?.exp || 0}/100 EXP
+                      </p>
+                    </div>
                   </button>
 
                   {menuOpen && (
@@ -1007,24 +1022,13 @@ function App() {
                     </div>
                   )}
                 </div>
-
-                {/* Profile — tetap tampil di semua ukuran */}
+                {/* Avatar — buka Player Card */}
                 <button
                   type="button"
                   onClick={() => setShowShowcase(true)}
                   title="Lihat Player Card"
-                  className="flex items-center gap-2 shrink-0 cursor-pointer"
+                  className="flex items-center justify-center shrink-0 cursor-pointer"
                 >
-                  <div className="min-w-0 sm:block text-left">
-                    <h2
-                      className={`font-black text-md truncate leading-tight ${nameTagStyle}`}
-                    >
-                      {userData?.username || "Player"}
-                    </h2>
-                    <p className="text-[9px] text-gray-400 font-semibold truncate leading-tight">
-                      {userData?.exp || 0}/100 EXP
-                    </p>
-                  </div>
                   <div className="w-9 h-9 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 border border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
                     <span className="text-[6px] font-bold text-purple-200 uppercase leading-none">
                       Lv
@@ -1038,51 +1042,59 @@ function App() {
             </div>
           </div>
 
-          {/* MOBILE NAV PANEL — fade-in ke bawah, isi tabs + currency */}
-          {mobileNavOpen && (
-            <div className="md:hidden bg-[#1e720f] border-t border-white/10 animate-fade-in">
-              <div className="px-4 py-3 flex items-center justify-center gap-6 border-b border-white/10">
-                <div className="flex items-center gap-1.5">
-                  <ShardIcon className="w-5 h-5 text-yellow-400" />
-                  <span className="text-sm font-bold text-white">
-                    {userData?.shards || 0}
-                  </span>
+          {/* MOBILE NAV PANEL — selalu di-render, animasi buka/tutup lewat grid-rows */}
+          <div
+            className={`md:hidden grid transition-all duration-300 ease-in-out ${
+              mobileNavOpen
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="bg-[#1e720f] border-t border-white/10">
+                <div className="px-4 py-3 flex items-center justify-center gap-6 border-b border-white/10">
+                  <div className="flex items-center gap-1.5">
+                    <ShardIcon className="w-5 h-5 text-yellow-400" />
+                    <span className="text-sm font-bold text-white">
+                      {userData?.shards || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <GemIcon className="w-5 h-5 text-yellow-400" />
+                    <span className="text-sm font-bold text-white">
+                      {userData?.gems || 0}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <GemIcon className="w-5 h-5 text-yellow-400" />
-                  <span className="text-sm font-bold text-white">
-                    {userData?.gems || 0}
-                  </span>
-                </div>
-              </div>
 
-              <nav className="flex flex-col">
-                {[
-                  { key: "quests", label: "Quests" },
-                  { key: "heatmap", label: "Activity" },
-                  { key: "leaderboard", label: "Leaderboard" },
-                  { key: "inventory", label: "Inventory" },
-                  { key: "shop", label: "Shops" },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(tab.key);
-                      setMobileNavOpen(false);
-                    }}
-                    className={`text-left px-4 py-3 text-sm font-bold transition-colors cursor-pointer border-l-4 ${
-                      activeTab === tab.key
-                        ? "border-[#7ad950] bg-[#51b330]/40 text-white"
-                        : "border-transparent text-white/80 hover:bg-[#51b330]/30"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
+                <nav className="flex flex-col">
+                  {[
+                    { key: "quests", label: "Quests" },
+                    { key: "heatmap", label: "Activity" },
+                    { key: "leaderboard", label: "Leaderboard" },
+                    { key: "inventory", label: "Inventory" },
+                    { key: "shop", label: "Shops" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.key);
+                        setMobileNavOpen(false);
+                      }}
+                      className={`text-left px-4 py-3 text-sm font-bold transition-colors cursor-pointer border-l-4 ${
+                        activeTab === tab.key
+                          ? "border-[#7ad950] bg-[#51b330]/40 text-white"
+                          : "border-transparent text-white/80 hover:bg-[#51b330]/30"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
             </div>
-          )}
+          </div>
         </header>
 
         <div className="w-full relative z-10 flex-1 flex flex-col">

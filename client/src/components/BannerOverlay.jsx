@@ -89,15 +89,15 @@ function BannerOverlay({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white border border-gray-200 w-full max-w-2xl rounded-lg text-gray-900 shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden">
+      <div className="bg-white border border-gray-200 w-full max-w-2xl rounded-lg text-gray-900 shadow-2xl relative flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden">
         {/* Header */}
-        <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <div>
-              <h2 className="text-xl font-black text-[#1e720f] tracking-wide">
+        <div className="flex justify-between items-center border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-black text-[#1e720f] tracking-wide truncate">
                 GACHA BANNERS
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-[10px] sm:text-xs text-gray-500 hidden sm:block">
                 Choose your banner and pull for cosmetic items!
               </p>
             </div>
@@ -105,20 +105,20 @@ function BannerOverlay({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 font-bold text-xl p-2 rounded-lg hover:bg-gray-100"
+            className="text-gray-400 hover:text-gray-700 font-bold text-xl p-2 rounded-lg hover:bg-gray-100 shrink-0"
           >
             ✕
           </button>
         </div>
 
-        {/* Body: Tab kiri + Preview kanan */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar Tab - Kiri */}
-          <div className="w-32 sm:w-36 shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col p-2 gap-2">
+        {/* Body: Tab (kiri di desktop / atas di mobile) + Preview */}
+        <div className="flex flex-col sm:flex-row flex-1 overflow-hidden">
+          {/* Tab Bar — horizontal di mobile, sidebar vertikal di desktop */}
+          <div className="w-full sm:w-32 md:w-36 shrink-0 bg-gray-50 border-b sm:border-b-0 sm:border-r border-gray-200 flex flex-row sm:flex-col p-2 gap-2">
             <button
               type="button"
               onClick={() => setActiveBanner("standard")}
-              className={`flex flex-col items-center gap-1 py-4 px-2 text-xs font-black rounded-md transition-all ${
+              className={`flex-1 sm:flex-none flex flex-row sm:flex-col items-center justify-center gap-1 py-2.5 sm:py-4 px-2 text-xs font-black rounded-md transition-all ${
                 activeBanner === "standard"
                   ? "bg-[#51b330] text-white shadow-md"
                   : "text-gray-500 hover:text-gray-900 hover:bg-white"
@@ -133,7 +133,7 @@ function BannerOverlay({
                 bannerStatus.isActive && setActiveBanner("limited")
               }
               disabled={!bannerStatus.isActive}
-              className={`relative flex flex-col items-center gap-1 py-4 px-2 text-xs font-black rounded-md transition-all ${
+              className={`relative flex-1 sm:flex-none flex flex-row sm:flex-col items-center justify-center gap-1 py-2.5 sm:py-4 px-2 text-xs font-black rounded-md transition-all ${
                 activeBanner === "limited"
                   ? "bg-amber-400 text-black shadow-md"
                   : bannerStatus.isActive
@@ -155,14 +155,14 @@ function BannerOverlay({
             </button>
           </div>
 
-          {/* Preview Banner - Kanan, full lebar */}
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col justify-center">
+          {/* Preview Banner */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col justify-center">
             {activeBanner === "standard" ? (
-              <div className="bg-gradient-to-br from-green-50 via-white to-white p-8 rounded-md border border-[#51b330]/30 text-center shadow-sm">
+              <div className="bg-gradient-to-br from-green-50 via-white to-white p-5 sm:p-8 rounded-md border border-[#51b330]/30 text-center shadow-sm">
                 <span className="inline-block px-3 py-1 bg-[#51b330]/10 border border-[#51b330]/30 text-[#1e720f] text-[10px] font-black rounded-full mb-3">
                   PERMANENT POOL
                 </span>
-                <h3 className="text-3xl font-black text-[#1e720f] mb-2">
+                <h3 className="text-2xl sm:text-3xl font-black text-[#1e720f] mb-2">
                   STANDARD BANNER
                 </h3>
                 <p className="text-xs text-gray-600 mb-5 max-w-sm mx-auto">
@@ -175,21 +175,21 @@ function BannerOverlay({
                   type="button"
                   onClick={handlePull}
                   disabled={isRolling}
-                  className="px-8 py-3 text-sm font-black bg-[#51b330] text-white rounded-xl hover:bg-[#409228] transition-all transform hover:scale-105 shadow-[0_4px_20px_rgba(81,179,48,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-8 py-3 text-sm font-black bg-[#51b330] text-white rounded-xl hover:bg-[#409228] transition-all transform hover:scale-105 shadow-[0_4px_20px_rgba(81,179,48,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Pull 1x (50 Gems)
                 </button>
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-amber-50 via-white to-white p-8 rounded-md border border-amber-300 text-center shadow-sm relative">
-                {/* MINI COUNTDOWN / ENDED BADGE — pojok kanan atas */}
+              <div className="bg-gradient-to-br from-amber-50 via-white to-white p-5 sm:p-8 rounded-md border border-amber-300 text-center shadow-sm relative">
+                {/* MINI COUNTDOWN / ENDED BADGE */}
                 {!loadingStatus && bannerStatus.isActive && (
-                  <span className="absolute top-3 right-3 px-2 py-1 bg-amber-100 border border-amber-300 text-amber-700 text-[9px] font-black rounded-full whitespace-nowrap">
+                  <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 py-1 bg-amber-100 border border-amber-300 text-amber-700 text-[9px] font-black rounded-full whitespace-nowrap">
                     {bannerStatus.daysRemaining}d {bannerStatus.hoursRemaining}h
                   </span>
                 )}
                 {!loadingStatus && !bannerStatus.isActive && (
-                  <span className="absolute top-3 right-3 px-2 py-1 bg-red-50 border border-red-300 text-red-600 text-[9px] font-black rounded-full whitespace-nowrap">
+                  <span className="absolute top-2 right-2 sm:top-3 sm:right-3 px-2 py-1 bg-red-50 border border-red-300 text-red-600 text-[9px] font-black rounded-full whitespace-nowrap">
                     BANNER ENDED
                   </span>
                 )}
@@ -197,7 +197,7 @@ function BannerOverlay({
                 <span className="inline-block px-3 py-1 bg-amber-400/10 border border-amber-400/40 text-amber-600 text-[10px] font-black rounded-full mb-3">
                   RATE UP CYBERPUNK MATRIX
                 </span>
-                <h3 className="text-3xl font-black text-amber-600 mb-2">
+                <h3 className="text-2xl sm:text-3xl font-black text-amber-600 mb-2">
                   LIMITED BANNER
                 </h3>
                 <p className="text-xs text-gray-600 mb-5 max-w-sm mx-auto">
@@ -210,7 +210,7 @@ function BannerOverlay({
                   type="button"
                   onClick={handlePull}
                   disabled={isRolling || !bannerStatus.isActive}
-                  className="px-8 py-3 text-sm font-black bg-amber-400 text-black rounded-xl hover:bg-amber-300 transition-all transform hover:scale-105 shadow-[0_4px_20px_rgba(251,191,36,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-8 py-3 text-sm font-black bg-amber-400 text-black rounded-xl hover:bg-amber-300 transition-all transform hover:scale-105 shadow-[0_4px_20px_rgba(251,191,36,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Pull 1x (50 Gems)
                 </button>
