@@ -957,32 +957,27 @@ function App() {
               </button>
 
               {/* Grup Dropdown Menu + Profile */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {/* Nama + Arrow — buka Dropdown Menu */}
                 <div className="relative" ref={menuRef}>
                   <button
                     type="button"
                     onClick={() => setMenuOpen((prev) => !prev)}
-                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-pointer ${
                       menuOpen ? "bg-white/15" : "hover:bg-white/10"
                     }`}
                     aria-label="Menu"
                   >
                     <Dropdown
-                      className={`w-6 h-5 text-white hover:text-gray-300 transition-transform ${
+                      className={`w-3 h-3 shrink-0 text-white hover:text-gray-300 transition-transform ${
                         menuOpen ? "rotate-180" : ""
                       }`}
                     />
-                    <div className="min-w-0 hidden sm:block text-left">
-                      <h2
-                        className={`font-black text-md truncate leading-tight ${nameTagStyle}`}
-                      >
-                        {userData?.username || "Player"}
-                      </h2>
-                      <p className="text-[9px] text-gray-400 font-semibold truncate leading-tight">
-                        {userData?.exp || 0}/100 EXP
-                      </p>
-                    </div>
+                    <h2
+                      className={`font-black text-lg truncate leading-none ${nameTagStyle}`}
+                    >
+                      {userData?.username || "Player"}
+                    </h2>
                   </button>
 
                   {menuOpen && (
@@ -1027,7 +1022,7 @@ function App() {
                   type="button"
                   onClick={() => setShowShowcase(true)}
                   title="Lihat Player Card"
-                  className="flex items-center justify-center shrink-0 cursor-pointer"
+                  className="flex flex-col items-center gap-1 shrink-0 cursor-pointer"
                 >
                   <div className="w-9 h-9 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 border border-purple-400/60 flex flex-col items-center justify-center shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
                     <span className="text-[6px] font-bold text-purple-200 uppercase leading-none">
@@ -1036,6 +1031,15 @@ function App() {
                     <span className="font-black text-[11px] text-white leading-none">
                       {userData?.level || 1}
                     </span>
+                  </div>
+                  {/* Mini EXP bar */}
+                  <div className="w-9 h-1 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#7ad950] transition-all duration-500"
+                      style={{
+                        width: `${Math.min(((userData?.exp || 0) / 100) * 100, 100)}%`,
+                      }}
+                    />
                   </div>
                 </button>
               </div>
@@ -1052,7 +1056,7 @@ function App() {
           >
             <div className="overflow-hidden">
               <div className="bg-[#1e720f] border-t border-white/10">
-                <div className="px-4 py-3 flex items-center justify-center gap-6 border-b border-white/10">
+                <div className="px-4 py-3.5 flex items-center justify-center gap-6 bg-black/20 border-b border-white/10">
                   <div className="flex items-center gap-1.5">
                     <ShardIcon className="w-5 h-5 text-yellow-400" />
                     <span className="text-sm font-bold text-white">
@@ -1082,7 +1086,7 @@ function App() {
                         setActiveTab(tab.key);
                         setMobileNavOpen(false);
                       }}
-                      className={`text-left px-4 py-3 text-sm font-bold transition-colors cursor-pointer border-l-4 ${
+                      className={`text-left px-4 py-3 text-sm font-bold transition-colors cursor-pointer ${
                         activeTab === tab.key
                           ? "border-[#7ad950] bg-[#51b330]/40 text-white"
                           : "border-transparent text-white/80 hover:bg-[#51b330]/30"
